@@ -60,6 +60,16 @@ uv run python -m src.cli --source ieee --query "machine learning" --search-limit
 
 対話プロンプトに従って、論文を選択・ダウンロードしてください。
 
+### Web GUI
+
+ブラウザベースのGUIを使用して、より直感的に検索とダウンロードを行えます。
+
+**GUIの起動:**
+```bash
+uv run streamlit run src/gui.py
+```
+ブラウザが自動的に開き、`http://localhost:8501` にアクセスできます。
+
 ### MCPサーバー
 
 LLMクライアント（Claude Desktop, VS Codeなど）でPaperFetchをMCPサーバーとして使用する場合：
