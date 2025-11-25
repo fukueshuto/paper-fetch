@@ -15,7 +15,7 @@ class ArxivFetcher(BaseFetcher):
             num_retries=3
         )
 
-    def search(self, query: str, max_results: int = 10) -> List[Paper]:
+    def search(self, query: str, max_results: int = None) -> List[Paper]:
         search = arxiv.Search(
             query=query,
             max_results=max_results,

@@ -10,7 +10,8 @@ def main():
     parser = argparse.ArgumentParser(description="PaperFetch CLI")
     parser.add_argument("--source", choices=["arxiv", "ieee"], required=True, help="Source to crawl from")
     parser.add_argument("--query", required=True, help="Search query")
-    parser.add_argument("--limit", type=int, default=10, help="Max results to fetch")
+    parser.add_argument("--search-limit", type=int, default=None, help="Max results to search (default: unlimited)")
+    parser.add_argument("--download-limit", type=int, default=None, help="Max results to download (default: unlimited)")
     parser.add_argument("--output", default="downloads", help="Output directory")
     parser.add_argument("--downloadable-only", action="store_true", help="Filter results to show only downloadable papers")
     parser.add_argument("--open-access-only", action="store_true", help="Search for Open Access papers only (IEEE only)")
@@ -28,9 +29,9 @@ def main():
     try:
         # Pass open_access_only to search if supported (IEEE)
         if args.source == "ieee":
-            results = client.search(args.query, max_results=args.limit, open_access_only=args.open_access_only)
+            results = client.search(args.query, max_results=args.search_limit, open_access_only=args.open_access_only)
         else:
-            results = client.search(args.query, max_results=args.limit)
+            results = client.search(args.query, max_results=args.search_limit)
     except Exception as e:
         print(f"Error during search: {e}")
         return
@@ -81,6 +82,12 @@ def main():
     if not selected_indices:
         print("No papers selected.")
         return
+
+    # Apply download limit if set
+    if args.download_limit is not None and len(selected_indices) > args.download_limit:
+        print(f"\nWarning: Selection ({len(selected_indices)}) exceeds download limit ({args.download_limit}).")
+        print(f"Truncating to first {args.download_limit} papers.")
+        selected_indices = selected_indices[:args.download_limit]
 
     print(f"\nDownloading {len(selected_indices)} papers to '{args.output}'...")
 

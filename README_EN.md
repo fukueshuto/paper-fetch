@@ -41,18 +41,19 @@ You can use the CLI to search and download papers directly from your terminal.
 
 **Search Arxiv:**
 ```bash
-uv run python -m src.cli --source arxiv --query "generative ai" --limit 5
+uv run python -m src.cli --source arxiv --query "generative ai" --search-limit 5
 ```
 
 **Search IEEE Xplore:**
 ```bash
-uv run python -m src.cli --source ieee --query "machine learning" --limit 5 --open-access-only
+uv run python -m src.cli --source ieee --query "machine learning" --search-limit 5 --open-access-only
 ```
 
 **Options:**
 - `--source`: `arxiv` or `ieee` (Required)
 - `--query`: Search query string (Required)
-- `--limit`: Maximum number of results (Default: 10)
+- `--search-limit`: Maximum number of results to search (Default: Unlimited)
+- `--download-limit`: Maximum number of results to download (Default: Unlimited)
 - `--output`: Directory to save downloaded PDFs (Default: `downloads`)
 - `--downloadable-only`: Filter results to show only downloadable papers
 - `--open-access-only`: Search for Open Access papers only (IEEE only)

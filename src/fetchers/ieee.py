@@ -24,7 +24,10 @@ class IeeeFetcher(BaseFetcher):
             'Referer': 'https://ieeexplore.ieee.org/search/searchresult.jsp'
         }
 
-    def search(self, query: str, max_results: int = 10, open_access_only: bool = False) -> List[Paper]:
+    def search(self, query: str, max_results: int = None, open_access_only: bool = False) -> List[Paper]:
+        # If max_results is None (unlimited), set a safe upper bound for IEEE API
+        if max_results is None:
+            max_results = 100
         # Get session cookies first
         session = requests.Session()
         try:
