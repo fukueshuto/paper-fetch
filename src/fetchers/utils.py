@@ -11,8 +11,8 @@ def sanitize_filename(text: str) -> str:
     # Limit length
     return text[:100]
 
-def generate_filename(paper_title: str, authors: list[str], published_date: Optional[date]) -> str:
-    """Generate filename based on the convention: {Year}_{Month}_{FirstAuthor}_{Title}.pdf"""
+def generate_filename(paper_title: str, authors: list[str], published_date: Optional[date], source: str = "") -> str:
+    """Generate filename based on the convention: {Year}_{Month}_{Source}_{FirstAuthor}_{LastAuthor}_{Title}.pdf"""
     year = "0000"
     month = "00"
 
@@ -21,11 +21,28 @@ def generate_filename(paper_title: str, authors: list[str], published_date: Opti
         month = f"{published_date.month:02d}"
 
     first_author = "Unknown"
+    last_author = ""
+
     if authors:
         # Get last name of the first author
         first_author = authors[0].split()[-1]
+        if len(authors) > 1:
+            last_author = authors[-1].split()[-1]
 
     sanitized_title = sanitize_filename(paper_title)
-    sanitized_author = sanitize_filename(first_author)
+    sanitized_first = sanitize_filename(first_author)
+    sanitized_last = sanitize_filename(last_author)
+    sanitized_source = sanitize_filename(source)
 
-    return f"{year}_{month}_{sanitized_author}_{sanitized_title}.pdf"
+    components = [year, month]
+    if sanitized_source:
+        components.append(sanitized_source)
+
+    components.append(sanitized_first)
+    if sanitized_last:
+        components.append(sanitized_last)
+
+    components.append(sanitized_title)
+
+    filename = "_".join(components)
+    return f"{filename}.pdf"

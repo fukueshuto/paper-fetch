@@ -95,7 +95,9 @@ def main():
         paper = results[idx]
         print(f"Downloading: {paper.title}...")
         try:
-            path = client.download_pdf(paper, args.output)
+            # Create source-specific subdirectory
+            source_dir = os.path.join(args.output, args.source)
+            path = client.download_pdf(paper, source_dir)
             print(f"  -> Saved to: {path}")
         except Exception as e:
             print(f"  -> Failed: {e}")

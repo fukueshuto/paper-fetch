@@ -45,7 +45,7 @@ class ArxivFetcher(BaseFetcher):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        filename = generate_filename(paper.title, paper.authors, paper.published_date)
+        filename = generate_filename(paper.title, paper.authors, paper.published_date, source="arxiv")
         filepath = os.path.join(save_dir, filename)
 
         # Use requests to download to have full control over the file creation

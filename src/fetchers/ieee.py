@@ -139,7 +139,7 @@ class IeeeFetcher(BaseFetcher):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        filename = generate_filename(paper.title, paper.authors, paper.published_date)
+        filename = generate_filename(paper.title, paper.authors, paper.published_date, source="ieee")
         filepath = os.path.join(save_dir, filename)
 
         # Try direct download first using requests (faster)
