@@ -168,53 +168,94 @@ if st.session_state.results:
 
     st.markdown(f"### Found {len(display_results)} papers")
 
-    # Selection Form
-    with st.form("selection_form"):
-        # Select All Checkbox (Simulated with a button outside or just manual)
-        # Streamlit forms don't support "Select All" easily without rerun.
-        # We'll just list them.
+    # --- Top Controls ---
+    col_top_1, col_top_2, col_top_3 = st.columns([1, 1, 2])
 
-        selected_indices = []
+    # Select All Logic
+    # We use a callback to update session state for individual checkboxes
+    def toggle_select_all():
+        select_all_state = st.session_state.select_all_top
+        for i in range(len(display_results)):
+            st.session_state[f"check_{i}"] = select_all_state
 
-        for i, paper in enumerate(display_results):
-            # Card-like layout
-            with st.container():
-                col_check, col_content = st.columns([0.05, 0.95])
+    with col_top_1:
+        st.checkbox("Select All", key="select_all_top", on_change=toggle_select_all)
 
-                with col_check:
-                    # Unique key for each checkbox
-                    checked = st.checkbox("", key=f"check_{i}")
-                    if checked:
-                        selected_indices.append(i)
+    with col_top_2:
+        if st.button("⬇️ Download Selected", key="btn_download_selected_top"):
+            selected_indices = []
+            for i in range(len(display_results)):
+                if st.session_state.get(f"check_{i}", False):
+                    selected_indices.append(i)
 
-                with col_content:
-                    st.markdown(f"""
-                    <div class="paper-card">
-                        <div class="paper-title"><a href="{paper.url}" target="_blank" style="text-decoration:none; color:inherit;">{paper.title}</a></div>
-                        <div class="paper-meta">
-                            👤 {', '.join(paper.authors[:3])}{'...' if len(paper.authors) > 3 else ''} |
-                            📅 {paper.published_date.year if paper.published_date else 'Unknown'} |
-                            {'🔓 Open Access' if paper.is_downloadable else '🔒 Restricted'}
-                        </div>
-                        <div class="paper-abstract">
-                            {paper.abstract[:300]}...
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        # Download Button
-        submitted = st.form_submit_button("⬇️ Download Selected")
-
-        if submitted:
             if not selected_indices:
                 st.warning("Please select at least one paper.")
             else:
+                papers_to_download = [display_results[i] for i in selected_indices]
                 # Apply download limit
+                if len(papers_to_download) > download_limit:
+                    st.warning(f"Selection ({len(papers_to_download)}) exceeds limit ({download_limit}). Truncating.")
+                    papers_to_download = papers_to_download[:download_limit]
+                download_papers(papers_to_download, output_dir, source)
+
+    with col_top_3:
+        if st.button("⬇️ Download All (Visible)", key="btn_download_all_top"):
+            papers_to_download = display_results
+            # Apply download limit
+            if len(papers_to_download) > download_limit:
+                st.warning(f"Total ({len(papers_to_download)}) exceeds limit ({download_limit}). Truncating.")
+                papers_to_download = papers_to_download[:download_limit]
+            download_papers(papers_to_download, output_dir, source)
+
+    # --- List ---
+    # We remove st.form because it isolates state and makes "Select All" harder without reruns.
+    # We use standard widgets.
+
+    for i, paper in enumerate(display_results):
+        # Card-like layout
+        with st.container():
+            col_check, col_content = st.columns([0.05, 0.95])
+
+            with col_check:
+                # Initialize key in session state if not present (default False)
+                if f"check_{i}" not in st.session_state:
+                    st.session_state[f"check_{i}"] = False
+
+                st.checkbox("", key=f"check_{i}")
+
+            with col_content:
+                st.markdown(f"""
+                <div class="paper-card">
+                    <div class="paper-title"><a href="{paper.url}" target="_blank" style="text-decoration:none; color:inherit;">{paper.title}</a></div>
+                    <div class="paper-meta">
+                        👤 {', '.join(paper.authors[:3])}{'...' if len(paper.authors) > 3 else ''} |
+                        📅 {paper.published_date.year if paper.published_date else 'Unknown'} |
+                        {'🔓 Open Access' if paper.is_downloadable else '🔒 Restricted'}
+                    </div>
+                    <div class="paper-abstract">
+                        {paper.abstract[:300]}...
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # --- Bottom Controls ---
+    st.markdown("---")
+    col_btm_1, col_btm_2 = st.columns([1, 3])
+
+    with col_btm_1:
+        if st.button("⬇️ Download Selected", key="btn_download_selected_btm"):
+            selected_indices = []
+            for i in range(len(display_results)):
+                if st.session_state.get(f"check_{i}", False):
+                    selected_indices.append(i)
+
+            if not selected_indices:
+                st.warning("Please select at least one paper.")
+            else:
                 papers_to_download = [display_results[i] for i in selected_indices]
                 if len(papers_to_download) > download_limit:
                     st.warning(f"Selection ({len(papers_to_download)}) exceeds limit ({download_limit}). Truncating.")
                     papers_to_download = papers_to_download[:download_limit]
-
                 download_papers(papers_to_download, output_dir, source)
 
 elif search_clicked:
