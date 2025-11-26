@@ -12,8 +12,7 @@ import requests
 from datetime import date
 
 class IeeeFetcher(BaseFetcher):
-    def __init__(self, headless: bool = True):
-        self.headless = headless
+    def __init__(self):
         self.base_url = "https://ieeexplore.ieee.org"
         self.headers = {
             'Host': 'ieeexplore.ieee.org',
@@ -24,14 +23,13 @@ class IeeeFetcher(BaseFetcher):
             'Referer': 'https://ieeexplore.ieee.org/search/searchresult.jsp'
         }
 
-    def search(self, query: str, max_results: int = None, open_access_only: bool = False) -> List[Paper]:
-        # If max_results is None (unlimited), set a safe upper bound for IEEE API
+    def search(self, query: str, max_results: int = None, open_access_only: bool = False, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
         if max_results is None:
-            max_results = 100
+            print("Warning: max_results is None. Recommend to set a safe upper bound for IEEE API.")
         # Get session cookies first
         session = requests.Session()
         try:
-            session.get(self.base_url, headers=self.headers, timeout=10)
+            session.get(self.base_url, timeout=10)
         except Exception as e:
             print(f"Warning: Failed to get initial cookies: {e}")
 
@@ -41,6 +39,21 @@ class IeeeFetcher(BaseFetcher):
             "returnType": "SEARCH",
             "rowsPerPage": max_results
         }
+
+        # Sorting
+        if sort_by == "relevance":
+            payload["sortType"] = "relevance"
+        elif sort_by == "date":
+            if sort_order == "asc":
+                payload["sortType"] = "oldest"
+            else:
+                payload["sortType"] = "newest"
+
+        # Date Range
+        if start_year or end_year:
+            s_year = start_year if start_year else 1800
+            e_year = end_year if end_year else date.today().year
+            payload["ranges"] = [f"{s_year}_{e_year}_Year"]
 
         if open_access_only:
             payload["openAccess"] = "true"
@@ -157,36 +170,6 @@ class IeeeFetcher(BaseFetcher):
                             f.write(chunk)
                     return filepath
         except Exception as e:
-            print(f"Direct download failed: {e}, falling back to Playwright...")
-
-        # Fallback to Playwright
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
-            context = browser.new_context(
-                user_agent=self.headers['User-Agent']
-            )
-            page = context.new_page()
-
-            try:
-                page.goto(paper.pdf_url)
-
-                # Wait for iframe
-                iframe_element = page.wait_for_selector("iframe[src*='.pdf']", timeout=15000)
-                pdf_src = iframe_element.get_attribute("src")
-
-                if pdf_src:
-                    response = page.request.get(pdf_src)
-                    if response.status == 200:
-                        with open(filepath, "wb") as f:
-                            f.write(response.body())
-                    else:
-                        raise Exception(f"Failed to download PDF from {pdf_src}, status: {response.status}")
-                else:
-                    raise Exception("Could not find PDF iframe source")
-
-            except Exception as e:
-                raise e
-            finally:
-                browser.close()
+            print(f"Direct download failed: {e}.")
 
         return filepath

@@ -1,5 +1,5 @@
 def main():
-    print("Hello from paper-crawling-mcp!")
+    print("Hello from paper-fetch!")
 
 
 if __name__ == "__main__":

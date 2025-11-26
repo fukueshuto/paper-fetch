@@ -81,17 +81,17 @@ def get_fetcher(source):
     if source == "arxiv":
         return ArxivFetcher()
     elif source == "ieee":
-        return IeeeFetcher(headless=True)
+        return IeeeFetcher()
     return None
 
-def search_papers(source, query, limit, open_access_only=False):
+def search_papers(source, query, limit, open_access_only=False, sort_by="relevance", sort_order="desc", start_year=None, end_year=None):
     fetcher = get_fetcher(source)
     with st.spinner(f"Searching {source.upper()} for '{query}'..."):
         try:
             if source == "ieee":
-                results = fetcher.search(query, max_results=limit, open_access_only=open_access_only)
+                results = fetcher.search(query, max_results=limit, open_access_only=open_access_only, sort_by=sort_by, sort_order=sort_order, start_year=start_year, end_year=end_year)
             else:
-                results = fetcher.search(query, max_results=limit)
+                results = fetcher.search(query, max_results=limit, sort_by=sort_by, sort_order=sort_order, start_year=start_year, end_year=end_year)
             st.session_state.results = results
             st.session_state.selected_papers = set() # Reset selection on new search
             return results
@@ -130,6 +130,18 @@ with st.sidebar:
     st.subheader("Search Settings")
     search_limit = st.number_input("Search Limit", min_value=1, max_value=100, value=10)
 
+    sort_by = st.selectbox("Sort By", ["relevance", "date"], index=0)
+    sort_order = st.selectbox("Sort Order", ["desc", "asc"], index=0)
+
+    col_year1, col_year2 = st.columns(2)
+    with col_year1:
+        start_year_input = st.text_input("Start Year", placeholder="YYYY")
+    with col_year2:
+        end_year_input = st.text_input("End Year", placeholder="YYYY")
+
+    start_year = int(start_year_input) if start_year_input and start_year_input.isdigit() else None
+    end_year = int(end_year_input) if end_year_input and end_year_input.isdigit() else None
+
     if source == "ieee":
         open_access_only = st.checkbox("Open Access Only", value=False)
     else:
@@ -154,7 +166,7 @@ with col2:
     search_clicked = st.button("🔍 Search", use_container_width=True)
 
 if search_clicked and query:
-    search_papers(source, query, search_limit, open_access_only)
+    search_papers(source, query, search_limit, open_access_only, sort_by, sort_order, start_year, end_year)
 
 # Display Results
 if st.session_state.results:

@@ -4,7 +4,7 @@ from .models import Paper
 
 class BaseFetcher(ABC):
     @abstractmethod
-    def search(self, query: str, max_results: int = 10) -> List[Paper]:
+    def search(self, query: str, max_results: int = 10, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
         """Search for papers by query."""
         pass
 

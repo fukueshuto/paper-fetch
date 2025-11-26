@@ -15,11 +15,30 @@ class ArxivFetcher(BaseFetcher):
             num_retries=3
         )
 
-    def search(self, query: str, max_results: int = None) -> List[Paper]:
+    def search(self, query: str, max_results: int = None, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+        # Map sort_by
+        criterion = arxiv.SortCriterion.Relevance
+        if sort_by == "date":
+            criterion = arxiv.SortCriterion.SubmittedDate
+
+        # Map sort_order
+        order = arxiv.SortOrder.Descending
+        if sort_order == "asc":
+            order = arxiv.SortOrder.Ascending
+
+        # Handle date filtering
+        final_query = query
+        if start_year or end_year:
+            # Default to a wide range if one side is missing
+            start_str = f"{start_year}01010000" if start_year else "190001010000"
+            end_str = f"{end_year}12312359" if end_year else "209912312359"
+            final_query = f"{query} AND submittedDate:[{start_str} TO {end_str}]"
+
         search = arxiv.Search(
-            query=query,
+            query=final_query,
             max_results=max_results,
-            sort_by=arxiv.SortCriterion.Relevance
+            sort_by=criterion,
+            sort_order=order
         )
 
         results = []

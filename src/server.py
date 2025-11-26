@@ -9,7 +9,7 @@ mcp = FastMCP("paper-fetch")
 
 # Initialize clients
 arxiv_client = ArxivFetcher()
-ieee_client = IeeeFetcher(headless=True)
+ieee_client = IeeeFetcher()
 
 @mcp.tool()
 def search_papers(source: str, query: str, limit: int = 5, open_access_only: bool = False) -> str:

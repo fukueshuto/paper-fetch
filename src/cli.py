@@ -8,13 +8,17 @@ from .fetchers.models import Paper
 
 def main():
     parser = argparse.ArgumentParser(description="PaperFetch CLI")
-    parser.add_argument("--source", choices=["arxiv", "ieee"], required=True, help="Source to crawl from")
+    parser.add_argument("--source", choices=["arxiv", "ieee"], required=True, help="Source to fetch from")
     parser.add_argument("--query", required=True, help="Search query")
     parser.add_argument("--search-limit", type=int, default=None, help="Max results to search (default: unlimited)")
     parser.add_argument("--download-limit", type=int, default=None, help="Max results to download (default: unlimited)")
     parser.add_argument("--output", default="downloads", help="Output directory")
     parser.add_argument("--downloadable-only", action="store_true", help="Filter results to show only downloadable papers")
     parser.add_argument("--open-access-only", action="store_true", help="Search for Open Access papers only (IEEE only)")
+    parser.add_argument("--sort-by", choices=["relevance", "date"], default="relevance", help="Sort by relevance or date")
+    parser.add_argument("--sort-order", choices=["desc", "asc"], default="desc", help="Sort order (descending or ascending)")
+    parser.add_argument("--start-year", type=int, help="Filter by start year")
+    parser.add_argument("--end-year", type=int, help="Filter by end year")
 
     args = parser.parse_args()
 
@@ -24,14 +28,29 @@ def main():
     if args.source == "arxiv":
         client = ArxivFetcher()
     elif args.source == "ieee":
-        client = IeeeFetcher(headless=True)
+        client = IeeeFetcher()
 
     try:
         # Pass open_access_only to search if supported (IEEE)
         if args.source == "ieee":
-            results = client.search(args.query, max_results=args.search_limit, open_access_only=args.open_access_only)
+            results = client.search(
+                args.query,
+                max_results=args.search_limit,
+                open_access_only=args.open_access_only,
+                sort_by=args.sort_by,
+                sort_order=args.sort_order,
+                start_year=args.start_year,
+                end_year=args.end_year
+            )
         else:
-            results = client.search(args.query, max_results=args.search_limit)
+            results = client.search(
+                args.query,
+                max_results=args.search_limit,
+                sort_by=args.sort_by,
+                sort_order=args.sort_order,
+                start_year=args.start_year,
+                end_year=args.end_year
+            )
     except Exception as e:
         print(f"Error during search: {e}")
         return
