@@ -27,12 +27,6 @@ PaperFetch is a tool designed to search and download academic paper PDFs from Ar
     uv sync
     ```
 
-3.  **Install Playwright browsers:**
-    (Required for IEEE Xplore functionality)
-    ```bash
-    uv run playwright install
-    ```
-
 ## Usage
 
 ### CLI
@@ -89,7 +83,3 @@ uv run python -m src.server
 - `src/server.py`: MCP server entry point.
 - `src/fetchers/`: Contains logic for Arxiv and IEEE fetching.
 - `downloads/`: Default directory for downloaded PDFs.
-
-## License
-
-[MIT](LICENSE)

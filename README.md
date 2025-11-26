@@ -27,12 +27,6 @@ PaperFetchは、ArxivおよびIEEE Xploreから学術論文のPDFを検索・ダ
     uv sync
     ```
 
-3.  **Playwrightブラウザのインストール:**
-    （IEEE Xplore機能に必要です）
-    ```bash
-    uv run playwright install
-    ```
-
 ## 使い方
 
 ### CLI
@@ -89,7 +83,3 @@ uv run python -m src.server
 - `src/server.py`: MCPサーバーのエントリーポイント
 - `src/fetchers/`: ArxivおよびIEEEの取得ロジック
 - `downloads/`: ダウンロードされたPDFのデフォルト保存先
-
-## ライセンス
-
-[MIT](LICENSE)
