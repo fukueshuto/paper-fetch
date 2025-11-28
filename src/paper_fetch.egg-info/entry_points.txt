@@ -1,0 +1,4 @@
+[console_scripts]
+paper-fetch = paper_fetch.cli:main
+paper-fetch-gui = paper_fetch.gui:main
+paper-fetch-mcp = paper_fetch.server:main

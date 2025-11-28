@@ -2,20 +2,21 @@ import arxiv
 import os
 import requests
 from typing import List
-from datetime import date
 from .base import BaseFetcher
 from .models import Paper
 from .utils import generate_filename
 
 class ArxivFetcher(BaseFetcher):
     def __init__(self):
+        super().__init__(delay_seconds=3.0)
         self.client = arxiv.Client(
             page_size=10,
-            delay_seconds=3.0,
+            delay_seconds=3.0, # arxiv library also has its own delay, but we enforce ours globally
             num_retries=3
         )
 
-    def search(self, query: str, max_results: int = None, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+    def search(self, query: str, max_results: int = 10, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+        self._enforce_rate_limit()
         # Map sort_by
         criterion = arxiv.SortCriterion.Relevance
         if sort_by == "date":
@@ -59,6 +60,37 @@ class ArxivFetcher(BaseFetcher):
             results.append(paper)
 
         return results
+
+    def get_total_results(self, query: str, start_year: int = None, end_year: int = None, **kwargs) -> int:
+        self._enforce_rate_limit()
+        import xml.etree.ElementTree as ET
+
+        # Handle date filtering for query construction
+        final_query = query
+        if start_year or end_year:
+            start_str = f"{start_year}01010000" if start_year else "190001010000"
+            end_str = f"{end_year}12312359" if end_year else "209912312359"
+            final_query = f"{query} AND submittedDate:[{start_str} TO {end_str}]"
+
+        url = 'http://export.arxiv.org/api/query'
+        params = {
+            'search_query': final_query,
+            'start': 0,
+            'max_results': 1
+        }
+
+        try:
+            response = requests.get(url, params=params, timeout=20)
+            response.raise_for_status()
+            root = ET.fromstring(response.content)
+            ns = {'opensearch': 'http://a9.com/-/spec/opensearch/1.1/'}
+            total_results = root.find('opensearch:totalResults', ns)
+            if total_results is not None:
+                return int(total_results.text)
+        except Exception as e:
+            print(f"Error getting total results: {e}")
+
+        return -1
 
     def download_pdf(self, paper: Paper, save_dir: str) -> str:
         if not os.path.exists(save_dir):

@@ -34,10 +34,9 @@ def search_papers(source: str, query: str, limit: int = 5, open_access_only: boo
             results = client.search(query, max_results=limit, open_access_only=open_access_only)
         else:
             results = client.search(query, max_results=limit)
-        # Return a formatted string or JSON.
-        # FastMCP handles JSON serialization if we return dict/list,
-        # but let's return a list of dicts for clarity.
-        return [p.to_dict() for p in results]
+        # Return a JSON string.
+        import json
+        return json.dumps([p.to_dict() for p in results], ensure_ascii=False, default=str)
     except Exception as e:
         return f"Error searching {source}: {str(e)}"
 
@@ -71,6 +70,17 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
         source = "ieee"
         client = ieee_client
         pdf_url = url # IEEE client handles the URL (viewer or stamp)
+
+        # Extract arnumber from URL
+        # URL formats:
+        # - https://ieeexplore.ieee.org/document/12345/
+        # - https://ieeexplore.ieee.org/document/12345
+        import re
+        match = re.search(r'document/(\d+)', url)
+        if match:
+            paper_id = match.group(1)
+        else:
+            paper_id = "unknown"
     else:
         return f"Error: Could not determine source from URL '{url}'"
 
@@ -81,7 +91,7 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
 
     paper = Paper(
         source=source,
-        id="unknown", # Not critical for download
+        id=paper_id if 'paper_id' in locals() else "unknown",
         title=title,
         authors=authors,
         abstract="",
@@ -96,5 +106,8 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
     except Exception as e:
         return f"Error downloading paper: {str(e)}"
 
-if __name__ == "__main__":
+def main():
     mcp.run()
+
+if __name__ == "__main__":
+    main()

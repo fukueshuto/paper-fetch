@@ -8,3 +8,4 @@ venv/
 downloads/
 *.pdf
 .DS_Store
+local_knowledge/

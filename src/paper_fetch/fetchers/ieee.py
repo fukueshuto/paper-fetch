@@ -1,18 +1,14 @@
 import os
-import time
-import random
 import requests
 from datetime import date
 from typing import List
-from playwright.sync_api import sync_playwright, Page
 from .base import BaseFetcher
 from .models import Paper
 from .utils import generate_filename
-import requests
-from datetime import date
 
 class IeeeFetcher(BaseFetcher):
     def __init__(self):
+        super().__init__(delay_seconds=5.0)
         self.base_url = "https://ieeexplore.ieee.org"
         self.headers = {
             'Host': 'ieeexplore.ieee.org',
@@ -23,14 +19,15 @@ class IeeeFetcher(BaseFetcher):
             'Referer': 'https://ieeexplore.ieee.org/search/searchresult.jsp'
         }
 
-    def search(self, query: str, max_results: int = None, open_access_only: bool = False, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+    def search(self, query: str, max_results: int = 10, open_access_only: bool = False, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+        self._enforce_rate_limit()
         if max_results is None:
             print("Warning: max_results is None. Recommend to set a safe upper bound for IEEE API.")
         # Get session cookies first
         session = requests.Session()
         try:
             session.get(self.base_url, timeout=10)
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             print(f"Warning: Failed to get initial cookies: {e}")
 
         payload = {
@@ -67,7 +64,7 @@ class IeeeFetcher(BaseFetcher):
             )
             response.raise_for_status()
             data = response.json()
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             print(f"Error querying IEEE API: {e}")
             return []
 
@@ -105,7 +102,7 @@ class IeeeFetcher(BaseFetcher):
                     if year:
                         try:
                             published_date = date(int(year), 1, 1)
-                        except:
+                        except ValueError:
                             pass
 
                     # Access Status
@@ -121,6 +118,10 @@ class IeeeFetcher(BaseFetcher):
                     elif isinstance(access_type_val, str):
                         if access_type_val.upper().replace('-', '_') in ['OPEN_ACCESS', 'EPHEMERA']:
                             is_downloadable = True
+
+                    # If PDF link is available, consider it downloadable (e.g. via IP auth)
+                    if pdf_link:
+                        is_downloadable = True
 
                     # If it's None or unknown, default to False (safe) or True (optimistic)?
                     # Given the user wants to filter, safe (False) is better,
@@ -148,6 +149,43 @@ class IeeeFetcher(BaseFetcher):
 
         return results
 
+    def get_total_results(self, query: str, start_year: int = None, end_year: int = None, **kwargs) -> int:
+        self._enforce_rate_limit()
+        session = requests.Session()
+        try:
+            session.get(self.base_url, timeout=10)
+        except Exception:
+            pass
+
+        payload = {
+            "queryText": query,
+            "returnFacets": ["ALL"],
+            "returnType": "SEARCH",
+            "rowsPerPage": 1
+        }
+
+        if start_year or end_year:
+            s_year = start_year if start_year else 1800
+            e_year = end_year if end_year else date.today().year
+            payload["ranges"] = [f"{s_year}_{e_year}_Year"]
+
+        if kwargs.get("open_access_only"):
+            payload["openAccess"] = "true"
+
+        try:
+            response = session.post(
+                f"{self.base_url}/rest/search",
+                headers=self.headers,
+                json=payload,
+                timeout=20
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get('totalRecords', 0)
+        except Exception as e:
+            print(f"Error getting total results: {e}")
+            return -1
+
     def download_pdf(self, paper: Paper, save_dir: str) -> str:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -169,7 +207,12 @@ class IeeeFetcher(BaseFetcher):
                         for chunk in response.iter_content(chunk_size=8192):
                             f.write(chunk)
                     return filepath
+                else:
+                    raise Exception(f"Failed to download PDF. Content-Type: {content_type}")
+            else:
+                raise Exception("Paper ID is missing")
         except Exception as e:
             print(f"Direct download failed: {e}.")
+            raise e
 
         return filepath

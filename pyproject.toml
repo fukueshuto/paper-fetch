@@ -7,7 +7,19 @@ requires-python = ">=3.13"
 dependencies = [
     "arxiv>=2.3.1",
     "mcp>=1.22.0",
-    "playwright>=1.56.0",
     "requests>=2.32.5",
     "streamlit>=1.40.0",
+    "questionary>=2.0.0",
 ]
+
+[project.scripts]
+paper-fetch = "paper_fetch.cli:main"
+paper-fetch-gui = "paper_fetch.gui:main"
+paper-fetch-mcp = "paper_fetch.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
