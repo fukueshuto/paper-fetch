@@ -5,6 +5,7 @@ src/paper_fetch/__init__.py
 src/paper_fetch/cli.py
 src/paper_fetch/gui.py
 src/paper_fetch/server.py
+src/paper_fetch/utils.py
 src/paper_fetch.egg-info/PKG-INFO
 src/paper_fetch.egg-info/SOURCES.txt
 src/paper_fetch.egg-info/dependency_links.txt

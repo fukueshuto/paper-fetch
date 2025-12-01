@@ -128,44 +128,19 @@ def run_app():
                 st.error(f"Error during search: {e}")
                 return []
 
-    def get_default_output_dir(query: str) -> str:
-        """Generate default output directory based on date and query."""
-        import datetime
-        import re
-        date_str = datetime.datetime.now().strftime("%Y%m%d")
-        # Sanitize query for file path
-        safe_query = re.sub(r'[^\w\-_]', '_', query)[:50]
-        return os.path.join("downloads", f"{date_str}_{safe_query}")
-
-    def download_papers(papers, output_dir_base, source):
+    def download_papers(papers, output_dir, source):
         fetcher = get_fetcher(source)
-
-        # Determine final output directory logic
-        # If output_dir_base is just "downloads" (default), generate dynamic path
-        if output_dir_base == "downloads":
-            # We need the query for the path.
-            # Assuming st.session_state.query holds the query used for these results.
-            query = st.session_state.query
-            final_output_dir_base = get_default_output_dir(query)
-        else:
-            final_output_dir_base = output_dir_base
-
-        # Append source subdirectory
-        final_output_dir = os.path.join(final_output_dir_base, source)
-
         progress_bar = st.progress(0)
         status_text = st.empty()
 
         success_count = 0
         total = len(papers)
 
-        st.info(f"Downloading to: {final_output_dir}")
-
         for i, paper in enumerate(papers):
             status_text.text(f"Downloading {i+1}/{total}: {paper.title[:50]}...")
             try:
-                # fetcher.download_pdf handles the directory creation
-                fetcher.download_pdf(paper, final_output_dir)
+                source_dir = os.path.join(output_dir, source)
+                fetcher.download_pdf(paper, source_dir)
                 success_count += 1
             except Exception as e:
                 st.error(f"Failed to download '{paper.title}': {e}")
@@ -173,7 +148,7 @@ def run_app():
             progress_bar.progress((i + 1) / total)
 
         status_text.text(f"Completed! Downloaded {success_count}/{total} papers.")
-        st.success(f"Downloaded {success_count} papers to {final_output_dir}")
+        st.success(f"Downloaded {success_count} papers to {os.path.join(output_dir, source)}")
 
     # --- Sidebar: Control Panel ---
     with st.sidebar:
@@ -181,8 +156,6 @@ def run_app():
 
         # 1. Search Area
         st.markdown("### 🔍 Search")
-        # We use keys to bind to session state.
-        source = st.selectbox("Source", ["arxiv", "ieee"], index=["arxiv", "ieee"].index(st.session_state.source), key="source")
         # Use session state directly for value to ensure persistence/updates
         query = st.text_input("Query", placeholder="e.g., 'LLM Agents'", value=st.session_state.query, key="query")
 
@@ -211,109 +184,49 @@ def run_app():
         with col_search:
             search_clicked = st.button("Go", type="primary", use_container_width=True)
 
-        # st.divider()
-
-        # 2. Action Area (Visible if results exist)
-        # st.markdown("### ⬇️ Actions")
-
-        # Use session state values for download settings since widgets are defined below
-        dl_limit = st.session_state.download_limit
-        out_dir = st.session_state.output_dir
-
-        # Action Buttons
-        has_results = len(st.session_state.results) > 0
-        selected_count = len(st.session_state.selected_papers)
-        total_results_count = len(st.session_state.results)
-
-        # Save Search Results Button
-        if st.button("💾 Save Search Results", disabled=not has_results, use_container_width=True):
-            from paper_fetch.utils import save_papers_to_json
-            import datetime
-
-            # Use dynamic path logic for JSON as well
-            if out_dir == "downloads":
-                save_dir = get_default_output_dir(st.session_state.query)
-            else:
-                save_dir = out_dir
-
-            # Create directory if it doesn't exist (save_papers_to_json handles file creation but maybe not full path)
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"search_results_{timestamp}.json"
-            save_path = os.path.join(save_dir, filename)
-
-            try:
-                save_papers_to_json(st.session_state.results, save_path)
-                st.success(f"Saved results to {save_path}")
-            except Exception as e:
-                st.error(f"Failed to save results: {e}")
-
-        # Download Selected Button
-        if st.button(f"⬇️ Download Selected ({selected_count})", type="primary", disabled=selected_count == 0, use_container_width=True):
-            papers_to_download = [st.session_state.results[i] for i in st.session_state.selected_papers]
-            if papers_to_download:
-                # Apply download limit from session state
-                if len(papers_to_download) > dl_limit:
-                    st.warning(f"Selection ({len(papers_to_download)}) exceeds limit ({dl_limit}). Truncating.")
-                    papers_to_download = papers_to_download[:dl_limit]
-
-                download_papers(papers_to_download, out_dir, st.session_state.source)
-            else:
-                st.warning("No papers selected for download.")
-
-        # Download All Button
-        # Disabled if: No results OR (Some selected AND Not all selected)
-        # Enabled if: Has results AND (None selected OR All selected)
-        is_partial_selection = 0 < selected_count < total_results_count
-        download_all_disabled = (not has_results) or is_partial_selection
-
-        if st.button("⬇️ Download All", disabled=download_all_disabled, use_container_width=True):
-            papers_to_download = st.session_state.results
-            if papers_to_download:
-                 # Apply download limit from session state
-                if len(papers_to_download) > dl_limit:
-                    st.warning(f"Total ({len(papers_to_download)}) exceeds limit ({dl_limit}). Truncating.")
-                    papers_to_download = papers_to_download[:dl_limit]
-
-                download_papers(papers_to_download, out_dir, st.session_state.source)
+        st.divider()
 
         st.divider()
 
         # 3. Settings Area
-        # Search Settings
-        with st.expander("⚙️ Search Settings", expanded=True):
-            st.number_input("Limit", min_value=1, max_value=100, key="search_limit", disabled=st.session_state.unlimited_search)
-            unlimited_search = st.checkbox("Unlimited Search", value=st.session_state.unlimited_search, key="unlimited_search")
+        with st.expander("⚙️ Settings", expanded=False):
+            st.caption("Search Configuration")
+            # We use keys to bind to session state.
+            # Note: We access st.session_state.source etc. which were initialized.
+            source = st.selectbox("Source", ["arxiv", "ieee"], key="source")
 
+            unlimited_search = st.checkbox("Unlimited Search", key="unlimited_search")
             if unlimited_search:
                 st.warning("⚠️ Rate limits apply.")
+                search_limit = None
+            else:
+                search_limit = st.number_input("Limit", min_value=1, max_value=100, key="search_limit")
 
-            sort_by = st.selectbox("Sort By", ["relevance", "date"], index=["relevance", "date"].index(st.session_state.sort_by), key="sort_by")
-            sort_order = st.selectbox("Sort Order", ["desc", "asc"], index=["desc", "asc"].index(st.session_state.sort_order), key="sort_order")
+            sort_by = st.selectbox("Sort By", ["relevance", "date"], key="sort_by")
+            sort_order = st.selectbox("Sort Order", ["desc", "asc"], key="sort_order")
 
             col_y1, col_y2 = st.columns(2)
             with col_y1:
-                start_year_input = st.text_input("Start", placeholder="YYYY", value=st.session_state.start_year_input, key="start_year_input")
+                start_year_input = st.text_input("Start", placeholder="YYYY", key="start_year_input")
             with col_y2:
-                end_year_input = st.text_input("End", placeholder="YYYY", value=st.session_state.end_year_input, key="end_year_input")
+                end_year_input = st.text_input("End", placeholder="YYYY", key="end_year_input")
 
             start_year = int(start_year_input) if start_year_input and start_year_input.isdigit() else None
             end_year = int(end_year_input) if end_year_input and end_year_input.isdigit() else None
 
             if source == "ieee":
-                open_access_only = st.checkbox("Open Access Only", value=st.session_state.open_access_only, key="open_access_only")
+                open_access_only = st.checkbox("Open Access Only", key="open_access_only")
             else:
                 open_access_only = False
+                # We don't force reset session state here to avoid infinite rerun loops if not careful,
+                # but logically it should be False for Arxiv.
                 if 'open_access_only' in st.session_state and st.session_state.open_access_only:
-                    st.session_state.open_access_only = False
+                    st.session_state.open_access_only = False # Ensure it's reset if source changes to arxiv
 
-        # Download Settings
-        with st.expander("📂 Download Settings", expanded=True):
-            download_limit = st.number_input("Max Download", min_value=1, max_value=50, value=st.session_state.download_limit, key="download_limit")
-            output_dir = st.text_input("Save Dir", value=st.session_state.output_dir, key="output_dir")
-            downloadable_only = st.checkbox("Show Downloadable Only", value=st.session_state.downloadable_only, key="downloadable_only")
+            st.caption("Download Configuration")
+            download_limit = st.number_input("Max Download", min_value=1, max_value=50, key="download_limit")
+            output_dir = st.text_input("Save Dir", key="output_dir")
+            downloadable_only = st.checkbox("Show Downloadable Only", key="downloadable_only")
 
     # --- Main Content ---
     st.markdown('<h1 class="main-header">📚 Search Results</h1>', unsafe_allow_html=True)

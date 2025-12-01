@@ -55,6 +55,8 @@ uv run paper-fetch --source ieee --query "machine learning" --search-limit 5 --o
 - `--sort-order`: Sort order (`desc` or `asc`, Default: `desc`)
 - `--start-year`: Filter by start year (e.g., 2020)
 - `--end-year`: Filter by end year (e.g., 2024)
+- `--export`: Export search results to a JSON file (e.g., `results.json`)
+- `--from-file`: Download papers from a JSON file (e.g., `results.json`)
 
 Follow the interactive prompts to select and download papers.
 

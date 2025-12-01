@@ -94,6 +94,8 @@ docker run -v $(pwd)/downloads:/app/downloads paper-fetch --source arxiv --query
 - `--sort-order`: ソート順 (`desc` または `asc`, デフォルト: `desc`)
 - `--start-year`: 検索開始年 (例: 2020)
 - `--end-year`: 検索終了年 (例: 2024)
+- `--export`: 検索結果をJSONファイルにエクスポート (例: `results.json`)
+- `--from-file`: JSONファイルから論文情報を読み込んでダウンロード (例: `results.json`)
 
 ### Web GUI
 

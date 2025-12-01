@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: paper-fetch
-Version: 0.1.0
+Version: 0.1.7
 Summary: Add your description here
 Requires-Python: >=3.13
 Description-Content-Type: text/markdown
@@ -68,8 +68,6 @@ uv sync
 
 ## 使い方
 
-## 使い方
-
 インストール後、以下のコマンドが利用可能です。
 
 ### CLI
@@ -79,14 +77,18 @@ uv sync
 ```bash
 # 対話モード
 paper-fetch
-
-# コマンドライン引数モード
-paper-fetch --source arxiv --query "generative ai" --search-limit 5
 ```
 
-**開発環境 (uv) の場合:**
+### コマンドライン引数モード
+
+**Arxivの検索:**
 ```bash
-uv run paper-fetch ...
+uv run paper-fetch --source arxiv --query "generative ai" --search-limit 5
+```
+
+**IEEE Xploreの検索:**
+```bash
+uv run paper-fetch --source ieee --query "machine learning" --search-limit 5 --open-access-only
 ```
 
 **Docker の場合:**
@@ -147,9 +149,9 @@ LLMクライアント（Claude Desktop, VS Codeなど）でPaperFetchをMCPサ�
 
 ## プロジェクト構成
 
-- `src/cli.py`: CLIのエントリーポイント
-- `src/server.py`: MCPサーバーのエントリーポイント
-- `src/fetchers/`: ArxivおよびIEEEの取得ロジック
+- `src/paper_fetch/cli.py`: CLIのエントリーポイント
+- `src/paper_fetch/server.py`: MCPサーバーのエントリーポイント
+- `src/paper_fetch/fetchers/`: ArxivおよびIEEEの取得ロジック
 - `downloads/`: ダウンロードされたPDFのデフォルト保存先
 
 ## 安全な利用とレート制限について
