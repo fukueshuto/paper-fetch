@@ -9,3 +9,5 @@ downloads/
 *.pdf
 .DS_Store
 local_knowledge/
+build/
+*.egg-info/
