@@ -8,6 +8,7 @@ from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
+
 class Converter:
     def __init__(self):
         self.os_type = platform.system()
@@ -35,7 +36,7 @@ class Converter:
             "pandoc": self.has_pandoc,
             "libreoffice": self.has_soffice is not None,
             "inkscape": self.has_inkscape,
-            "pdftotext": self.has_pdftotext
+            "pdftotext": self.has_pdftotext,
         }
 
     def extract_zip(self, zip_path: str, output_dir: str) -> bool:
@@ -61,7 +62,9 @@ class Converter:
                 if self.os_type == "Darwin":
                     # Quick check if unzip supports -O
                     try:
-                        help_out = subprocess.check_output(["unzip", "-h"], stderr=subprocess.STDOUT).decode()
+                        help_out = subprocess.check_output(
+                            ["unzip", "-h"], stderr=subprocess.STDOUT
+                        ).decode()
                         if "-O CHAR" in help_out or "-O charset" in help_out:
                             use_encoding_flag = True
                     except:
@@ -75,13 +78,17 @@ class Converter:
                 subprocess.run(cmd, check=True, capture_output=True)
                 return True
             except subprocess.CalledProcessError as e:
-                logger.warning(f"System unzip failed: {e}. Falling back to python zipfile.")
+                logger.warning(
+                    f"System unzip failed: {e}. Falling back to python zipfile."
+                )
             except Exception as e:
-                logger.warning(f"Error using system unzip: {e}. Falling back to python zipfile.")
+                logger.warning(
+                    f"Error using system unzip: {e}. Falling back to python zipfile."
+                )
 
         # Fallback to Python zipfile
         try:
-            with zipfile.ZipFile(zip_path, 'r') as zf:
+            with zipfile.ZipFile(zip_path, "r") as zf:
                 # Python's zipfile doesn't support cp932 decoding for filenames easily before extracting
                 # But we can try to iterate and decode manually if needed,
                 # or just extractall which uses cp437 or utf-8.
@@ -116,6 +123,7 @@ class Converter:
             # Note: soffice is sensitive to user profile locking.
             # The script used a temp profile dir.
             import tempfile
+
             with tempfile.TemporaryDirectory() as temp_profile_dir:
                 env = os.environ.copy()
                 # env['UserInstallation'] = f"file://{temp_profile_dir}" # This format depends on OS?
@@ -125,9 +133,11 @@ class Converter:
                     self.has_soffice,
                     f"-env:UserInstallation=file://{temp_profile_dir}",
                     "--headless",
-                    "--convert-to", "pdf",
+                    "--convert-to",
+                    "pdf",
                     input_path,
-                    "--outdir", output_dir
+                    "--outdir",
+                    output_dir,
                 ]
 
                 # Set a timeout (e.g., 60 seconds)
@@ -136,14 +146,18 @@ class Converter:
                 if os.path.exists(expected_pdf_path):
                     return expected_pdf_path
                 else:
-                    logger.error(f"PDF conversion ran but output file not found: {expected_pdf_path}")
+                    logger.error(
+                        f"PDF conversion ran but output file not found: {expected_pdf_path}"
+                    )
                     return None
 
         except subprocess.TimeoutExpired:
             logger.error(f"PDF conversion timed out for {input_path}")
             return None
         except subprocess.CalledProcessError as e:
-            logger.error(f"PDF conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}")
+            logger.error(
+                f"PDF conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}"
+            )
             return None
         except Exception as e:
             logger.error(f"Unexpected error during PDF conversion: {e}")
@@ -166,9 +180,11 @@ class Converter:
         output_path = os.path.join(output_dir, f"{base_name}.md")
         ext = os.path.splitext(filename)[1].lower()
 
-        if ext == '.pdf':
+        if ext == ".pdf":
             if not self.has_pdftotext:
-                logger.warning("pdftotext not found. Skipping PDF to Markdown conversion.")
+                logger.warning(
+                    "pdftotext not found. Skipping PDF to Markdown conversion."
+                )
                 return None
 
             try:
@@ -178,30 +194,36 @@ class Converter:
                 subprocess.run(cmd, check=True, capture_output=True)
                 return output_path
             except subprocess.CalledProcessError as e:
-                logger.error(f"pdftotext conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}")
+                logger.error(
+                    f"pdftotext conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}"
+                )
                 return None
             except Exception as e:
                 logger.error(f"Unexpected error during pdftotext conversion: {e}")
                 return None
 
-        elif ext in ['.docx', '.doc', '.odt']:
+        elif ext in [".docx", ".doc", ".odt"]:
             if not self.has_pandoc:
                 logger.warning("Pandoc not found. Skipping Markdown conversion.")
                 return None
 
             # Temp dir for media extraction
             import tempfile
+
             with tempfile.TemporaryDirectory() as temp_media_dir:
                 try:
                     # Adjust command to extract to a persistent location
                     media_dir = os.path.join(output_dir, "media")
                     cmd = [
                         "pandoc",
-                        "-f", "docx", # Assuming docx for now, but pandoc can auto-detect often
-                        "-t", "markdown",
+                        "-f",
+                        "docx",  # Assuming docx for now, but pandoc can auto-detect often
+                        "-t",
+                        "markdown",
                         input_path,
-                        f"--extract-media={output_dir}", # This usually creates a 'media' folder in output_dir
-                        "-o", output_path
+                        f"--extract-media={output_dir}",  # This usually creates a 'media' folder in output_dir
+                        "-o",
+                        output_path,
                     ]
 
                     subprocess.run(cmd, check=True, capture_output=True)
@@ -213,7 +235,9 @@ class Converter:
                     return output_path
 
                 except subprocess.CalledProcessError as e:
-                    logger.error(f"Pandoc conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}")
+                    logger.error(
+                        f"Pandoc conversion failed for {input_path}: {e.stderr.decode() if e.stderr else str(e)}"
+                    )
                     return None
                 except Exception as e:
                     logger.error(f"Unexpected error during Pandoc conversion: {e}")
@@ -228,9 +252,18 @@ class Converter:
         if not os.path.exists(media_dir):
             return
 
+        # Flag to track if Inkscape is working correctly
+        inkscape_operational = True
+
         for root, _, files in os.walk(media_dir):
+            if not inkscape_operational:
+                break
+
             for file in files:
-                if file.lower().endswith(('.wmf', '.emf')):
+                if not inkscape_operational:
+                    break
+
+                if file.lower().endswith((".wmf", ".emf")):
                     file_path = os.path.join(root, file)
                     output_png = os.path.splitext(file_path)[0] + ".png"
                     try:
@@ -239,8 +272,17 @@ class Converter:
                             "inkscape",
                             file_path,
                             "--export-type=png",
-                            f"--export-filename={output_png}"
+                            f"--export-filename={output_png}",
                         ]
                         subprocess.run(cmd, check=True, capture_output=True)
+                    except subprocess.CalledProcessError as e:
+                        # Check for SIGSEGV (returncode -11) or other signals
+                        if e.returncode < 0:
+                            logger.error(
+                                f"Inkscape crashed with signal {-e.returncode} while converting {file}. Disabling further Inkscape conversions to prevent system instability."
+                            )
+                            inkscape_operational = False
+                        else:
+                            logger.warning(f"Failed to convert image {file}: {e}")
                     except Exception as e:
                         logger.warning(f"Failed to convert image {file}: {e}")
