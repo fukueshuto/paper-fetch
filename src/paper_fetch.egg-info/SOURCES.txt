@@ -3,6 +3,7 @@ README.md
 pyproject.toml
 src/paper_fetch/__init__.py
 src/paper_fetch/cli.py
+src/paper_fetch/converter.py
 src/paper_fetch/gui.py
 src/paper_fetch/server.py
 src/paper_fetch/utils.py
@@ -17,4 +18,5 @@ src/paper_fetch/fetchers/arxiv.py
 src/paper_fetch/fetchers/base.py
 src/paper_fetch/fetchers/ieee.py
 src/paper_fetch/fetchers/models.py
+src/paper_fetch/fetchers/threegpp.py
 src/paper_fetch/fetchers/utils.py

@@ -6,6 +6,8 @@ from .base import BaseFetcher
 from .models import Paper
 from .utils import generate_filename
 
+from ..converter import Converter
+
 class IeeeFetcher(BaseFetcher):
     def __init__(self):
         super().__init__(search_delay=3.0, download_delay=20.0)
@@ -18,6 +20,7 @@ class IeeeFetcher(BaseFetcher):
             'Origin': 'https://ieeexplore.ieee.org',
             'Referer': 'https://ieeexplore.ieee.org/search/searchresult.jsp'
         }
+        self.converter = Converter()
 
     def search(self, query: str, max_results: int = 10, open_access_only: bool = False, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
         self._wait_for_search()
@@ -186,7 +189,7 @@ class IeeeFetcher(BaseFetcher):
             print(f"Error getting total results: {e}")
             return -1
 
-    def download_pdf(self, paper: Paper, save_dir: str) -> str:
+    def download_pdf(self, paper: Paper, save_dir: str, convert_to_md: bool = False) -> str:
         self._wait_for_download()
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -207,6 +210,10 @@ class IeeeFetcher(BaseFetcher):
                     with open(filepath, 'wb') as f:
                         for chunk in response.iter_content(chunk_size=8192):
                             f.write(chunk)
+
+                    if convert_to_md:
+                        self.converter.convert_to_markdown(filepath, save_dir)
+
                     return filepath
                 else:
                     raise Exception(f"Failed to download PDF. Content-Type: {content_type}")

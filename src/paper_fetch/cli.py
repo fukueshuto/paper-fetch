@@ -6,13 +6,24 @@ import re
 import questionary
 from .fetchers.arxiv import ArxivFetcher
 from .fetchers.ieee import IeeeFetcher
+from .fetchers.threegpp import ThreeGPPFetcher
 from .utils import save_papers_to_json, load_papers_from_json
 
-def get_default_output_dir(query: str) -> str:
+def get_default_output_dir(query: str, source: str) -> str:
     """Generate default output directory based on date and query."""
     date_str = datetime.datetime.now().strftime("%Y%m%d")
-    # Sanitize query for file path
-    safe_query = re.sub(r'[^\w\-_]', '_', query)[:50]
+
+    # Use fetcher to get safe directory name
+    if source == "arxiv":
+        safe_query = ArxivFetcher().get_query_dirname(query)
+    elif source == "ieee":
+        safe_query = IeeeFetcher().get_query_dirname(query)
+    elif source == "3gpp":
+        safe_query = ThreeGPPFetcher().get_query_dirname(query)
+    else:
+        # Fallback
+        safe_query = re.sub(r'[^\w\-_]', '_', query)[:50]
+
     return os.path.join("downloads", f"{date_str}_{safe_query}")
 
 def interactive_mode():
@@ -22,7 +33,7 @@ def interactive_mode():
     # 1. Source Selection
     source = questionary.select(
         "Select source:",
-        choices=["arxiv", "ieee"]
+        choices=["arxiv", "ieee", "3gpp"]
     ).ask()
 
     if not source:
@@ -42,6 +53,10 @@ def interactive_mode():
         print("    - スペース区切り: AND (全てを含む)")
         print("    - OR検索:         'term1 OR term2'")
         print("    - 除外:           'term1 NOT term2'")
+    elif source == "3gpp":
+        print("  3GPP:")
+        print("    - URL指定: 会議ドキュメントや仕様書のディレクトリURLを入力してください。")
+        print("    - 例: https://www.3gpp.org/ftp/tsg_ran/WG1_RL1/TSGR1_122b/Docs/")
 
     query = questionary.text("Search query:").ask()
     if not query:
@@ -64,14 +79,27 @@ def interactive_mode():
     # Helper to get hit count
     def check_hits(current_query):
         print(f"Checking potential hits for '{current_query}'...")
-        temp_client = ArxivFetcher() if source == "arxiv" else IeeeFetcher()
+        if source == "arxiv":
+            temp_client = ArxivFetcher()
+        elif source == "ieee":
+            temp_client = IeeeFetcher()
+        elif source == "3gpp":
+            temp_client = ThreeGPPFetcher()
+
         try:
-            total = temp_client.get_total_results(
-                query=current_query,
-                start_year=settings["start_year"],
-                end_year=settings["end_year"],
-                open_access_only=settings["open_access_only"]
-            )
+            if source == "ieee":
+                total = temp_client.get_total_results(
+                    query=current_query,
+                    start_year=settings["start_year"],
+                    end_year=settings["end_year"],
+                    open_access_only=settings["open_access_only"]
+                )
+            else:
+                total = temp_client.get_total_results(
+                    query=current_query,
+                    start_year=settings["start_year"],
+                    end_year=settings["end_year"]
+                )
             return total
         except Exception as e:
             print(f"Error checking hits: {e}")
@@ -84,7 +112,7 @@ def interactive_mode():
     # 3. Main Menu Loop
     while True:
         # Resolve current output dir for display
-        current_out_dir = settings['output_dir'] if settings['output_dir'] else get_default_output_dir(query)
+        current_out_dir = settings['output_dir'] if settings['output_dir'] else get_default_output_dir(query, source)
         if settings['use_source_subdir']:
             display_path = os.path.join(current_out_dir, source)
         else:
@@ -95,6 +123,7 @@ def interactive_mode():
         print(f"Query:           {query} (Hits: {total_hits if total_hits >= 0 else 'Unknown'})")
         print(f"Search Limit:    {settings['search_limit'] if settings['search_limit'] is not None else 'Unlimited'}")
         print(f"Sort:            {settings['sort_by']} ({settings['sort_order']})")
+
         filters = []
         if source == "ieee" and settings['open_access_only']:
             filters.append("Open Access")
@@ -103,6 +132,14 @@ def interactive_mode():
         if settings['start_year'] or settings['end_year']:
             filters.append(f"Year: {settings['start_year'] or '*'} - {settings['end_year'] or '*'}")
         print(f"Filters:         {', '.join(filters) if filters else 'None'}")
+
+        conversions = []
+        if settings.get('convert_to_md'):
+            conversions.append("Markdown")
+        if source == "3gpp" and not settings.get('convert_to_pdf', True):
+            conversions.append("No PDF")
+        print(f"Conversion:      {', '.join(conversions) if conversions else 'Default'}")
+
         print(f"Output Dir:      {display_path} (Auto-generated)" if settings['output_dir'] is None else f"Output Dir:      {display_path}")
         print("------------------------")
 
@@ -114,6 +151,7 @@ def interactive_mode():
                 questionary.Choice("🔃 Change Sort", value="sort"),
                 questionary.Choice("🔍 Change Query", value="query"),
                 questionary.Choice("⚙️ Other Filters", value="filters"),
+                questionary.Choice("📝 Conversion Settings", value="conversion"),
                 questionary.Choice("📂 Change Output Dir", value="output"),
                 questionary.Choice("❌ Quit", value="quit")
             ]
@@ -181,6 +219,11 @@ def interactive_mode():
             # Re-check hits if filters changed (especially date/OA)
             total_hits = check_hits(query)
 
+        elif action == "conversion":
+            settings["convert_to_md"] = questionary.confirm("Convert to Markdown?", default=settings.get("convert_to_md", False)).ask()
+            if source == "3gpp":
+                settings["convert_to_pdf"] = questionary.confirm("Convert to PDF?", default=settings.get("convert_to_pdf", True)).ask()
+
         elif action == "output":
             out_input = questionary.text("Output directory (empty for default):", default=settings["output_dir"] if settings["output_dir"] else "").ask()
             if out_input:
@@ -192,7 +235,12 @@ def interactive_mode():
 
     # 4. Search Execution
     print(f"\nSearching {source} for '{query}'...")
-    client = ArxivFetcher() if source == "arxiv" else IeeeFetcher()
+    if source == "arxiv":
+        client = ArxivFetcher()
+    elif source == "ieee":
+        client = IeeeFetcher()
+    elif source == "3gpp":
+        client = ThreeGPPFetcher()
 
     try:
         # Construct args for search
@@ -280,7 +328,7 @@ def interactive_mode():
 
     # 7. Download
     # Determine final output directory
-    base_output_dir = settings['output_dir'] if settings['output_dir'] else get_default_output_dir(query)
+    base_output_dir = settings['output_dir'] if settings['output_dir'] else get_default_output_dir(query, source)
     if settings['use_source_subdir']:
         final_output_dir = os.path.join(base_output_dir, source)
     else:
@@ -291,7 +339,19 @@ def interactive_mode():
     for paper in selected_papers:
         print(f"Downloading: {paper.title}...")
         try:
-            path = client.download_pdf(paper, final_output_dir)
+            if source == "3gpp":
+                path = client.download_pdf(
+                    paper,
+                    final_output_dir,
+                    convert_to_md=settings.get("convert_to_md", False),
+                    convert_to_pdf=settings.get("convert_to_pdf", True)
+                )
+            else:
+                path = client.download_pdf(
+                    paper,
+                    final_output_dir,
+                    convert_to_md=settings.get("convert_to_md", False)
+                )
             print(f"  -> Saved to: {path}")
         except Exception as e:
             print(f"  -> Failed: {e}")
@@ -300,7 +360,7 @@ def interactive_mode():
 
 def main():
     parser = argparse.ArgumentParser(description="PaperFetch CLI")
-    parser.add_argument("--source", choices=["arxiv", "ieee"], required=False, help="Source to fetch from")
+    parser.add_argument("--source", choices=["arxiv", "ieee", "3gpp"], required=False, help="Source to fetch from")
     parser.add_argument("--query", required=False, help="Search query")
     parser.add_argument("--search-limit", type=int, default=10, help="Max results to search (default: 10, 0 for unlimited)")
     parser.add_argument("--download-limit", type=int, default=None, help="Max results to download (default: unlimited)")
@@ -314,6 +374,8 @@ def main():
     parser.add_argument("--end-year", type=int, help="Filter by end year")
     parser.add_argument("--export", help="Export search results to a JSON file")
     parser.add_argument("--from-file", help="Download papers from a JSON file")
+    parser.add_argument("--convert-to-md", action="store_true", help="Convert downloaded papers to Markdown")
+    parser.add_argument("--no-pdf", action="store_true", help="Skip PDF conversion (3GPP only)")
 
     # Check if any args are passed. If not, go interactive.
     if len(sys.argv) == 1:
@@ -347,6 +409,7 @@ def main():
         # We need a client to download. Since papers can be mixed source, we need to instantiate appropriate fetchers.
         arxiv_client = ArxivFetcher()
         ieee_client = IeeeFetcher()
+        threegpp_client = ThreeGPPFetcher()
 
         print(f"Downloading to '{base_output_dir}'...")
 
@@ -361,10 +424,18 @@ def main():
             try:
                 if paper.source == "arxiv":
                     final_dir = os.path.join(base_output_dir, "arxiv") if not args.no_source_subdir else base_output_dir
-                    path = arxiv_client.download_pdf(paper, final_dir)
+                    path = arxiv_client.download_pdf(paper, final_dir, convert_to_md=args.convert_to_md)
                 elif paper.source == "ieee":
                     final_dir = os.path.join(base_output_dir, "ieee") if not args.no_source_subdir else base_output_dir
-                    path = ieee_client.download_pdf(paper, final_dir)
+                    path = ieee_client.download_pdf(paper, final_dir, convert_to_md=args.convert_to_md)
+                elif paper.source == "3gpp":
+                    final_dir = os.path.join(base_output_dir, "3gpp") if not args.no_source_subdir else base_output_dir
+                    path = threegpp_client.download_pdf(
+                        paper,
+                        final_dir,
+                        convert_to_md=args.convert_to_md,
+                        convert_to_pdf=not args.no_pdf
+                    )
                 else:
                     print(f"  -> Unknown source: {paper.source}")
                     continue
@@ -392,6 +463,8 @@ def main():
         client = ArxivFetcher()
     elif args.source == "ieee":
         client = IeeeFetcher()
+    elif args.source == "3gpp":
+        client = ThreeGPPFetcher()
 
     # Handle 0 as unlimited
     search_limit_val = args.search_limit
@@ -489,7 +562,7 @@ def main():
         selected_indices = selected_indices[:args.download_limit]
 
     # Determine final output directory
-    base_output_dir = args.output if args.output else get_default_output_dir(args.query)
+    base_output_dir = args.output if args.output else get_default_output_dir(args.query, args.source)
     if not args.no_source_subdir:
         final_output_dir = os.path.join(base_output_dir, args.source)
     else:
@@ -501,7 +574,19 @@ def main():
         paper = results[idx]
         print(f"Downloading: {paper.title}...")
         try:
-            path = client.download_pdf(paper, final_output_dir)
+            if args.source == "3gpp":
+                path = client.download_pdf(
+                    paper,
+                    final_output_dir,
+                    convert_to_md=args.convert_to_md,
+                    convert_to_pdf=not args.no_pdf
+                )
+            else:
+                path = client.download_pdf(
+                    paper,
+                    final_output_dir,
+                    convert_to_md=args.convert_to_md
+                )
             print(f"  -> Saved to: {path}")
         except Exception as e:
             print(f"  -> Failed: {e}")

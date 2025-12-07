@@ -6,6 +6,8 @@ from .base import BaseFetcher
 from .models import Paper
 from .utils import generate_filename
 
+from ..converter import Converter
+
 class ArxivFetcher(BaseFetcher):
     def __init__(self):
         super().__init__(search_delay=3.0, download_delay=20.0)
@@ -14,6 +16,7 @@ class ArxivFetcher(BaseFetcher):
             delay_seconds=3.0, # arxiv library also has its own delay, but we enforce ours globally
             num_retries=3
         )
+        self.converter = Converter()
 
     def search(self, query: str, max_results: int = 10, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
         self._wait_for_search()
@@ -92,7 +95,7 @@ class ArxivFetcher(BaseFetcher):
 
         return -1
 
-    def download_pdf(self, paper: Paper, save_dir: str) -> str:
+    def download_pdf(self, paper: Paper, save_dir: str, convert_to_md: bool = False) -> str:
         self._wait_for_download()
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -108,5 +111,8 @@ class ArxivFetcher(BaseFetcher):
         with open(filepath, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+
+        if convert_to_md:
+            self.converter.convert_to_markdown(filepath, save_dir)
 
         return filepath

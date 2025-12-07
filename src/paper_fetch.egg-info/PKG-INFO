@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: paper-fetch
-Version: 0.1.7
+Version: 0.1.8
 Summary: Add your description here
 Requires-Python: >=3.13
 Description-Content-Type: text/markdown
@@ -10,6 +10,7 @@ Requires-Dist: mcp>=1.22.0
 Requires-Dist: requests>=2.32.5
 Requires-Dist: streamlit>=1.40.0
 Requires-Dist: questionary>=2.0.0
+Requires-Dist: watchdog>=3.0.0
 Dynamic: license-file
 
 # PaperFetch
@@ -108,6 +109,8 @@ docker run -v $(pwd)/downloads:/app/downloads paper-fetch --source arxiv --query
 - `--sort-order`: ソート順 (`desc` または `asc`, デフォルト: `desc`)
 - `--start-year`: 検索開始年 (例: 2020)
 - `--end-year`: 検索終了年 (例: 2024)
+- `--export`: 検索結果をJSONファイルにエクスポート (例: `results.json`)
+- `--from-file`: JSONファイルから論文情報を読み込んでダウンロード (例: `results.json`)
 
 ### Web GUI
 
@@ -160,4 +163,7 @@ LLMクライアント（Claude Desktop, VS Codeなど）でPaperFetchをMCPサ�
 
 - **検索リミットの活用**: デフォルトでは検索結果は10件に制限されています。無制限（`0` または `all`）に設定する場合は十分ご注意ください。
 - **Hit Count機能**: CLIの対話モードでは、実際に検索・ダウンロードを行う前に「Check Hit Count」機能を使用して、対象件数を確認することをお勧めします。
-- **ダウンロード間隔**: ツール内部で適切な待機時間を設けていますが、連続して大量のダウンロードを行うことは避けてください。
+- **ダウンロード間隔**: ツール内部で以下の待機時間を設けています。
+    - **検索**: 3.0秒 + ランダム待機 (0.0〜2.0秒) = **約3.0〜5.0秒**
+    - **ダウンロード**: 20.0秒 + ランダム待機 (10.0〜40.0秒) = **約30.0〜60.0秒**
+    - GUIではリアルタイムの待機状況が表示されますが、大量のダウンロードには時間がかかることを予めご了承ください。
