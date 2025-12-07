@@ -11,8 +11,11 @@ mcp = FastMCP("paper-fetch")
 arxiv_client = ArxivFetcher()
 ieee_client = IeeeFetcher()
 
+
 @mcp.tool()
-def search_papers(source: str, query: str, limit: int = 5, open_access_only: bool = False) -> str:
+def search_papers(
+    source: str, query: str, limit: int = 5, open_access_only: bool = False
+) -> str:
     """
     Search for papers from Arxiv or IEEE Xplore.
 
@@ -31,17 +34,29 @@ def search_papers(source: str, query: str, limit: int = 5, open_access_only: boo
 
     try:
         if source.lower() == "ieee":
-            results = client.search(query, max_results=limit, open_access_only=open_access_only)
+            results = client.search(
+                query, max_results=limit, open_access_only=open_access_only
+            )
         else:
             results = client.search(query, max_results=limit)
         # Return a JSON string.
         import json
-        return json.dumps([p.to_dict() for p in results], ensure_ascii=False, default=str)
+
+        return json.dumps(
+            [p.to_dict() for p in results], ensure_ascii=False, default=str
+        )
     except Exception as e:
         return f"Error searching {source}: {str(e)}"
 
+
 @mcp.tool()
-def download_paper(url: str, title: str, authors: List[str], year: Optional[int] = None, save_dir: str = "downloads") -> str:
+def download_paper(
+    url: str,
+    title: str,
+    authors: List[str],
+    year: Optional[int] = None,
+    save_dir: str = "downloads",
+) -> str:
     """
     Download a paper's PDF given its metadata.
 
@@ -69,14 +84,15 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
     elif "ieeexplore.ieee.org" in url:
         source = "ieee"
         client = ieee_client
-        pdf_url = url # IEEE client handles the URL (viewer or stamp)
+        pdf_url = url  # IEEE client handles the URL (viewer or stamp)
 
         # Extract arnumber from URL
         # URL formats:
         # - https://ieeexplore.ieee.org/document/12345/
         # - https://ieeexplore.ieee.org/document/12345
         import re
-        match = re.search(r'document/(\d+)', url)
+
+        match = re.search(r"document/(\d+)", url)
         if match:
             paper_id = match.group(1)
         else:
@@ -91,13 +107,13 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
 
     paper = Paper(
         source=source,
-        id=paper_id if 'paper_id' in locals() else "unknown",
+        id=paper_id if "paper_id" in locals() else "unknown",
         title=title,
         authors=authors,
         abstract="",
         url=url,
         pdf_url=pdf_url,
-        published_date=published_date
+        published_date=published_date,
     )
 
     try:
@@ -106,8 +122,23 @@ def download_paper(url: str, title: str, authors: List[str], year: Optional[int]
     except Exception as e:
         return f"Error downloading paper: {str(e)}"
 
+
 def main():
+    import sys
+
+    if sys.stdin.isatty():
+        print("PaperFetch MCP Server")
+        print("This is a Model Context Protocol (MCP) server.")
+        print(
+            "Please configure your MCP client (e.g., Claude Desktop) to use this command."
+        )
+        print("See README.md for details regarding configuration.")
+        print("\nCommand to use in configuration:")
+        print("  paper-fetch-mcp")
+        sys.exit(0)
+
     mcp.run()
+
 
 if __name__ == "__main__":
     main()

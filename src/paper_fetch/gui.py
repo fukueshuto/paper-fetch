@@ -10,28 +10,37 @@ from paper_fetch.gui_items.state import init_session_state
 from paper_fetch.gui_items.search import search_panel
 from paper_fetch.gui_items.results import results_panel
 
-# def run_app():
-st.set_page_config(
-    page_title="PaperFetch GUI",
-    page_icon="📚",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
-# Apply Custom CSS
-apply_custom_css()
+def main():
+    import sys
+    from streamlit.web import cli as stcli
 
-# Initialize Session State
-init_session_state()
+    sys.argv = ["streamlit", "run", __file__]
+    sys.exit(stcli.main())
 
-# --- Main Content ---
 
-# --- Search Panel Container ---
-if st.session_state.in_search_phase:
-    search_panel()
-else:
-    results_panel()
+if __name__ == "__main__":
+    st.set_page_config(
+        page_title="PaperFetch GUI",
+        page_icon="📚",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
 
-# Footer
-st.markdown("---")
-st.markdown("Built with ❤️ using Streamlit and PaperFetch")
+    # Apply Custom CSS
+    apply_custom_css()
+
+    # Initialize Session State
+    init_session_state()
+
+    # --- Main Content ---
+
+    # --- Search Panel Container ---
+    if st.session_state.in_search_phase:
+        search_panel()
+    else:
+        results_panel()
+
+    # Footer
+    st.markdown("---")
+    st.markdown("Built with ❤️ using Streamlit and PaperFetch")

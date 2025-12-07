@@ -21,13 +21,19 @@ PaperFetchは、ArxivおよびIEEE Xploreから学術論文のPDFを検索・ダ
 
 - **Arxiv連携**: 公式Arxiv APIを使用して論文を検索・ダウンロードします。
 - **IEEE Xplore連携**: Rest APIとrequestsを使用して論文を検索・ダウンロードします（Open Accessフィルタリング対応）。
+- **3GPP連携**: 3GPPポータルから仕様書や寄書を検索・ダウンロードします。URLによる直接指定も可能です。
+- **PDF -> Markdown変換**: ダウンロードしたPDFを自動的にMarkdownテキストに変換します（CLI/GUI対応）。
 - **CLIツール**: 論文の検索と一括ダウンロードを行うための対話型コマンドラインツールです。
+- **GUIツール**: 直感的な操作で検索・フィルタリング・ダウンロードが可能なWebアプリケーションです。
 - **MCPサーバー**: LLMエージェント向けに `search_papers` および `download_paper` ツールを公開します。
 
 ## 前提条件
 
 - Python 3.13以上
 - [uv](https://github.com/astral-sh/uv) （依存関係管理に推奨）
+- **PDF変換用ツール（オプション）**:
+    - `pdftotext` (poppler-utils): テキスト抽出用
+    - `marker`: 高精度なPDF変換用 (インストールが必要な場合あり)
 
 ## インストール
 
@@ -76,7 +82,7 @@ uv sync
 ターミナルから直接論文を検索・ダウンロードできます。
 
 ```bash
-# 対話モード
+# 対話モード（推奨）
 paper-fetch
 ```
 
@@ -92,14 +98,21 @@ uv run paper-fetch --source arxiv --query "generative ai" --search-limit 5
 uv run paper-fetch --source ieee --query "machine learning" --search-limit 5 --open-access-only
 ```
 
+**3GPPの検索:**
+```bash
+uv run paper-fetch --source 3gpp --query "TR 23.700-80" --search-limit 5
+# URL指定（フォルダ指定ダウンロード）
+uv run paper-fetch --source 3gpp --query "https://www.3gpp.org/ftp/..." --convert-to-md
+```
+
 **Docker の場合:**
 ```bash
 docker run -v $(pwd)/downloads:/app/downloads paper-fetch --source arxiv --query "AI"
 ```
 
 **オプション:**
-- `--source`: `arxiv` または `ieee` （必須）
-- `--query`: 検索クエリ文字列 （必須）
+- `--source`: `arxiv`, `ieee`, または `3gpp` （必須）
+- `--query`: 検索クエリ文字列 または URL （必須）
 - `--search-limit`: 検索する最大結果数 （デフォルト: 10, `0`で無制限）
 - `--download-limit`: ダウンロードする最大結果数 （デフォルト: 無制限）
 - `--output`: PDF保存先ディレクトリ （デフォルト: `downloads`）
@@ -109,12 +122,14 @@ docker run -v $(pwd)/downloads:/app/downloads paper-fetch --source arxiv --query
 - `--sort-order`: ソート順 (`desc` または `asc`, デフォルト: `desc`)
 - `--start-year`: 検索開始年 (例: 2020)
 - `--end-year`: 検索終了年 (例: 2024)
+- `--convert-to-md`: PDFダウンロード後にMarkdownへ変換する
 - `--export`: 検索結果をJSONファイルにエクスポート (例: `results.json`)
 - `--from-file`: JSONファイルから論文情報を読み込んでダウンロード (例: `results.json`)
 
 ### Web GUI
 
 ブラウザベースのGUIを使用して、より直感的に検索とダウンロードを行えます。
+v0.2.0より、GUIは高速化と使いやすさのためにリファクタリングされました。
 
 ```bash
 paper-fetch-gui
@@ -154,7 +169,10 @@ LLMクライアント（Claude Desktop, VS Codeなど）でPaperFetchをMCPサ�
 
 - `src/paper_fetch/cli.py`: CLIのエントリーポイント
 - `src/paper_fetch/server.py`: MCPサーバーのエントリーポイント
-- `src/paper_fetch/fetchers/`: ArxivおよびIEEEの取得ロジック
+- `src/paper_fetch/gui.py`: GUIのエントリーポイント
+- `src/paper_fetch/gui_items/`: GUIコンポーネント用モジュール
+- `src/paper_fetch/fetchers/`: 各データソース（Arxiv, IEEE, 3GPP）の取得ロジック
+- `src/paper_fetch/converter.py`: PDFからMarkdownへの変換ロジック
 - `downloads/`: ダウンロードされたPDFのデフォルト保存先
 
 ## 安全な利用とレート制限について
