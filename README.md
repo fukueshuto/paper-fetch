@@ -20,6 +20,36 @@ PaperFetchは、ArxivおよびIEEE Xploreから学術論文のPDFを検索・ダ
     - `pdftotext` (poppler-utils): テキスト抽出用
     - `marker`: 高精度なPDF変換用 (インストールが必要な場合あり)
 
+## 外部ツールのインストール（変換機能用）
+
+PDF変換やMarkdown変換機能（`--convert-to-md` や3GPPのPDF変換）を使用するには、以下のシステムツールが必要です。これらはPythonパッケージではないため、OSのパッケージマネージャーを使用してインストールしてください。
+
+### 必須: Poppler (pdftotext)
+PDFからテキストデータを抽出するために使用します。
+
+- **macOS (Homebrew)**:
+  ```bash
+  brew install poppler
+  ```
+- **Ubuntu/Debian**:
+  ```bash
+  sudo apt-get install poppler-utils
+  ```
+- **Windows**:
+  [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/) からバイナリをダウンロードし、PATHに通してください。または Chocolatey/Winget を使用可能な場合もあります。
+
+### オプション: その他のツール
+
+- **Pandoc**: Word (.docx) ファイル等をMarkdownに変換する場合に必要です。
+  - macOS: `brew install pandoc`
+  - Linux: `sudo apt-get install pandoc`
+
+- **LibreOffice**: ドキュメントをPDFに変換する場合に必要です。
+  - macOS: `brew install --cask libreoffice`
+
+- **Inkscape**: ドキュメント内の画像形式（WMF/EMF）をPNGに変換する場合に必要です。
+  - macOS: `brew install --cask inkscape`
+
 ## インストール
 
 ### 方法 1: pipx / uv tool (推奨)
@@ -30,14 +60,14 @@ PaperFetchは、ArxivおよびIEEE Xploreから学術論文のPDFを検索・ダ
 ```bash
 pipx install .
 # または GitHub から直接:
-# pipx install git+https://github.com/yourusername/paper-fetch.git
+# pipx install git+https://github.com/fukueshuto/paper-fetch.git
 ```
 
 **uv ユーザー:**
 ```bash
 uv tool install .
 # または GitHub から直接:
-# uv tool install git+https://github.com/yourusername/paper-fetch.git
+# uv tool install git+https://github.com/fukueshuto/paper-fetch.git
 ```
 
 ### 方法 2: Docker
@@ -53,7 +83,7 @@ docker build -t paper-fetch .
 リポジトリをクローンして開発を行う場合:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/fukueshuto/paper-fetch.git
 cd paper-fetch
 uv sync
 ```
