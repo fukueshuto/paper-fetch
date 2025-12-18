@@ -65,4 +65,30 @@ downloads/
     │   └── ...
     ├── notebooklm_session.json    # NotebookLM連携用のセッション情報
     └── ...
+
+## 🤖 MCP Server (Claude Desktop 連携)
+
+PaperFetch は [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) に対応しており、Claude Desktop などのMCPクライアントから直接以下の機能を呼び出せます。
+
+- **`search_papers`**: Arxiv, IEEE, 3GPP(URL), USPTO から文献を検索。
+- **`download_paper`**: 検索結果や指定URLからPDFをダウンロード。
+- **`upload_to_notebooklm_tool`**: ダウンロードしたファイルを NotebookLM へ自動アップロード。
+
+### 設定 (claude_desktop_config.json)
+
+```json
+{
+  "mcpServers": {
+    "paper-fetch": {
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "paper-fetch-mcp"
+      ]
+    }
+  }
+}
+```
+※ `uv tool install .` でインストール済みであることが前提です。
 ```
