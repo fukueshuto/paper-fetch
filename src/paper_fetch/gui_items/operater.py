@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from paper_fetch.gui_items.fetcher_info import get_fetcher
+from paper_fetch.gui_items.state import save_state
 
 
 def check_hits():
@@ -56,6 +57,7 @@ def check_hits():
             else:
                 st.session_state.search_hit_total = total
                 st.session_state.hits_checked = True
+                save_state()
 
         except Exception as e:
             st.session_state.check_hits_error = str(e)
@@ -115,6 +117,8 @@ def search_papers(
             st.session_state.filter_keyword = ""
             st.session_state.filter_year_min = None
             st.session_state.filter_year_max = None
+            st.session_state.filter_year_max = None
+            save_state()
             return results
         except Exception as e:
             st.error(f"Error during search: {e}")
@@ -195,6 +199,7 @@ def download_papers(papers, output_dir_base, source):
                     paper,
                     final_output_dir,
                     convert_to_md=st.session_state.convert_to_md,
+                    method=st.session_state.executed_download_method,  # Pass method
                 )
             success_count += 1
         except Exception as e:
@@ -204,3 +209,6 @@ def download_papers(papers, output_dir_base, source):
 
     status_text.text(f"Completed! Downloaded {success_count}/{total} papers.")
     st.success(f"Downloaded {success_count} papers to {final_output_dir}")
+    st.success(f"Downloaded {success_count} papers to {final_output_dir}")
+    save_state()
+    return final_output_dir

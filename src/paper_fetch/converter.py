@@ -4,7 +4,7 @@ import subprocess
 import zipfile
 import platform
 import logging
-from typing import Optional, List
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class Converter:
                         ).decode()
                         if "-O CHAR" in help_out or "-O charset" in help_out:
                             use_encoding_flag = True
-                    except:
+                    except Exception:
                         pass
 
                 if use_encoding_flag:
@@ -125,7 +125,7 @@ class Converter:
             import tempfile
 
             with tempfile.TemporaryDirectory() as temp_profile_dir:
-                env = os.environ.copy()
+                # env = os.environ.copy()
                 # env['UserInstallation'] = f"file://{temp_profile_dir}" # This format depends on OS?
                 # The script used -env:UserInstallation="file://$temp_profile_dir" as argument
 
@@ -210,10 +210,10 @@ class Converter:
             # Temp dir for media extraction
             import tempfile
 
-            with tempfile.TemporaryDirectory() as temp_media_dir:
+            with tempfile.TemporaryDirectory():
                 try:
                     # Adjust command to extract to a persistent location
-                    media_dir = os.path.join(output_dir, "media")
+                    # media_dir = os.path.join(output_dir, "media")
                     cmd = [
                         "pandoc",
                         "-f",

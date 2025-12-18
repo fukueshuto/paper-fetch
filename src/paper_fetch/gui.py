@@ -9,6 +9,7 @@ from paper_fetch.gui_items.style import apply_custom_css
 from paper_fetch.gui_items.state import init_session_state
 from paper_fetch.gui_items.search import search_panel
 from paper_fetch.gui_items.results import results_panel
+from paper_fetch.gui_items.session_manager import session_manager_panel
 
 
 def main():
@@ -36,7 +37,9 @@ if __name__ == "__main__":
     # --- Main Content ---
 
     # --- Search Panel Container ---
-    if st.session_state.in_search_phase:
+    if st.session_state.in_session_manager_mode:
+        session_manager_panel()
+    elif st.session_state.in_search_phase:
         search_panel()
     else:
         results_panel()

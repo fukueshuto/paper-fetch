@@ -8,6 +8,9 @@ venv/
 downloads/
 *.pdf
 .DS_Store
-local_knowledge/
+_*/
 build/
 *.egg-info/
+.session_state.pkl
+config.toml
+_docs/

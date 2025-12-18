@@ -1,202 +1,88 @@
 # PaperFetch
 
-PaperFetchは、ArxivおよびIEEE Xploreから学術論文のPDFを検索・ダウンロードするためのツールです。コマンドラインインターフェース（CLI）とModel Context Protocol（MCP）サーバーの両方を提供しており、LLMワークフローへの統合が容易です。
+[English](README_EN.md) | [詳細機能解説](docs/features.md) | [開発者・設計ガイド](docs/design.md) | [トラブルシューティング](docs/troubleshooting.md)
 
-## 機能
+PaperFetchは、Arxiv、IEEE Xplore、3GPPから学術論文や技術仕様書を効率的に検索・ダウンロードするためのツールです。
+コマンドラインインターフェース（CLI）、Web GUI、およびModel Context Protocol（MCP）サーバーを提供し、研究者やエンジニアのワークフローを加速します。
 
-- **Arxiv連携**: 公式Arxiv APIを使用して論文を検索・ダウンロードします。
-- **IEEE Xplore連携**: Rest APIとrequestsを使用して論文を検索・ダウンロードします（Open Accessフィルタリング対応）。
-- **3GPP連携**: 3GPPポータルから仕様書や寄書を検索・ダウンロードします。URLによる直接指定も可能です。
-- **PDF -> Markdown変換**: ダウンロードしたPDFを自動的にMarkdownテキストに変換します（CLI/GUI対応）。
-- **CLIツール**: 論文の検索と一括ダウンロードを行うための対話型コマンドラインツールです。
-- **GUIツール**: 直感的な操作で検索・フィルタリング・ダウンロードが可能なWebアプリケーションです。
-- **MCPサーバー**: LLMエージェント向けに `search_papers` および `download_paper` ツールを公開します。
+## 主な機能
+
+- **マルチソース検索**:
+  - **Arxiv**: 公式APIを使用した検索。
+  - **IEEE Xplore**: Open Access論文のフィルタリング対応。
+  - **3GPP**: 仕様書や寄書の検索、URL指定によるフォルダ一括ダウンロード。
+- **特許検索 (USPTO)**:
+  - **Status**: ⚠️ **Experimental / Unverified**
+  - 現在実装中ですが、APIキー取得待ちのため十分なデバッグが行われていません。動作保証外となります。
+- **NotebookLM 連携 (Enhanced)**:
+  - ダウンロードした論文PDFをGoogle NotebookLMへ自動アップロード。
+  - **Direct Open**: ノートブックIDを指定して既存のノートブックへ直接追加可能。
+  - **Session Resume**: 前回作業したノートブック情報を保持し、継続的な追加が可能。
+- **高度な設定管理**:
+  - `config.toml` によるデフォルト設定の管理。
+- **ドキュメント変換**:
+  - PDFからMarkdownへのテキスト変換。
+  - 3GPPドキュメントのPDF変換オプション。
 
 ## 前提条件
 
-- Python 3.13以上
-- [uv](https://github.com/astral-sh/uv) （依存関係管理に推奨）
-- **PDF変換用ツール（オプション）**:
-    - `pdftotext` (poppler-utils): テキスト抽出用
-    - `marker`: 高精度なPDF変換用 (インストールが必要な場合あり)
-
-## 外部ツールのインストール（変換機能用）
-
-PDF変換やMarkdown変換機能（`--convert-to-md` や3GPPのPDF変換）を使用するには、以下のシステムツールが必要です。これらはPythonパッケージではないため、OSのパッケージマネージャーを使用してインストールしてください。
-
-### 必須: Poppler (pdftotext)
-PDFからテキストデータを抽出するために使用します。
-
-- **macOS (Homebrew)**:
-  ```bash
-  brew install poppler
-  ```
-- **Ubuntu/Debian**:
-  ```bash
-  sudo apt-get install poppler-utils
-  ```
-- **Windows**:
-  [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/) からバイナリをダウンロードし、PATHに通してください。または Chocolatey/Winget を使用可能な場合もあります。
-
-### オプション: その他のツール
-
-- **Pandoc**: Word (.docx) ファイル等をMarkdownに変換する場合に必要です。
-  - macOS: `brew install pandoc`
-  - Linux: `sudo apt-get install pandoc`
-
-- **LibreOffice**: ドキュメントをPDFに変換する場合に必要です。
-  - macOS: `brew install --cask libreoffice`
-
-- **Inkscape**: ドキュメント内の画像形式（WMF/EMF）をPNGに変換する場合に必要です。
-  - macOS: `brew install --cask inkscape`
+- Python 3.12以上
+- [uv](https://github.com/astral-sh/uv) （推奨）
+- **NotebookLM連携**:
+    - `patchright` (自動化用ブラウザ)
+    - ※ 初回実行時に自動または手動でブラウザバイナリのインストールが必要です。
 
 ## インストール
 
-### 方法 1: pipx / uv tool (推奨)
+### 推奨: uv tool
 
-システム環境を汚さずにインストールできます。
-
-**一般ユーザー (pipx):**
-```bash
-pipx install .
-# または GitHub から直接:
-# pipx install git+https://github.com/fukueshuto/paper-fetch.git
-```
-
-**uv ユーザー:**
 ```bash
 uv tool install .
-# または GitHub から直接:
-# uv tool install git+https://github.com/fukueshuto/paper-fetch.git
+# または
+uv tool install git+https://github.com/fukueshuto/paper-fetch.git
 ```
 
-### 方法 2: Docker
+### NotebookLM機能の準備 (Patchright)
 
-Dockerイメージをビルドして利用することも可能です。
-
-```bash
-docker build -t paper-fetch .
-```
-
-### 方法 3: 開発者向け (uv)
-
-リポジトリをクローンして開発を行う場合:
+NotebookLM連携機能を使用する場合、より検出されにくいブラウザ自動化ツールである `patchright` を使用します。
 
 ```bash
-git clone https://github.com/fukueshuto/paper-fetch.git
-cd paper-fetch
-uv sync
+# 必要なブラウザバイナリのインストール
+uv run patchright install chromium
 ```
 
 ## 使い方
 
-インストール後、以下のコマンドが利用可能です。
-
-### CLI
-
-ターミナルから直接論文を検索・ダウンロードできます。
+### 1. Web GUIでの使用 (NotebookLM連携)
 
 ```bash
-# 対話モード（推奨）
+uv run paper-fetch-gui
+```
+
+GUIの "Export Actions" タブから "NotebookLM" を選択します。
+- **Create New Notebook**: 新しいノートブックを作成してアップロード。
+- **Add to Existing Notebook**: 既存のノートブックに追加。IDを指定するか、ブラウザ上で手動選択が可能です。
+
+### 2. CLIでの使用
+
+```bash
+# 対話モード
 paper-fetch
+
+# ワンライナー
+paper-fetch --source arxiv --query "generative ai"
 ```
 
-### コマンドライン引数モード
+## ディレクトリ構成
 
-**Arxivの検索:**
-```bash
-uv run paper-fetch --source arxiv --query "generative ai" --search-limit 5
+ダウンロードフォルダには、NotebookLMのセッション情報 (`notebooklm_session.json`) も保存され、後から同じノートブックを再利用するのに役立ちます。
+
+```text
+downloads/
+  └── {YYYYMMDD}_{Query}/
+      ├── arxiv/
+      ├── notebooklm_session.json  # 自動生成されるセッション情報
+      └── ...
 ```
 
-**IEEE Xploreの検索:**
-```bash
-uv run paper-fetch --source ieee --query "machine learning" --search-limit 5 --open-access-only
-```
-
-**3GPPの検索:**
-```bash
-uv run paper-fetch --source 3gpp --query "TR 23.700-80" --search-limit 5
-# URL指定（フォルダ指定ダウンロード）
-uv run paper-fetch --source 3gpp --query "https://www.3gpp.org/ftp/..." --convert-to-md
-```
-
-**Docker の場合:**
-```bash
-docker run -v $(pwd)/downloads:/app/downloads paper-fetch --source arxiv --query "AI"
-```
-
-**オプション:**
-- `--source`: `arxiv`, `ieee`, または `3gpp` （必須）
-- `--query`: 検索クエリ文字列 または URL （必須）
-- `--search-limit`: 検索する最大結果数 （デフォルト: 10, `0`で無制限）
-- `--download-limit`: ダウンロードする最大結果数 （デフォルト: 無制限）
-- `--output`: PDF保存先ディレクトリ （デフォルト: `downloads`）
-- `--downloadable-only`: ダウンロード可能な論文のみを表示
-- `--open-access-only`: Open Access論文のみを検索（IEEEのみ）
-- `--sort-by`: ソート基準 (`relevance` または `date`, デフォルト: `relevance`)
-- `--sort-order`: ソート順 (`desc` または `asc`, デフォルト: `desc`)
-- `--start-year`: 検索開始年 (例: 2020)
-- `--end-year`: 検索終了年 (例: 2024)
-- `--convert-to-md`: PDFダウンロード後にMarkdownへ変換する
-- `--export`: 検索結果をJSONファイルにエクスポート (例: `results.json`)
-- `--from-file`: JSONファイルから論文情報を読み込んでダウンロード (例: `results.json`)
-
-### Web GUI
-
-ブラウザベースのGUIを使用して、より直感的に検索とダウンロードを行えます。
-v0.2.0より、GUIは高速化と使いやすさのためにリファクタリングされました。
-
-```bash
-paper-fetch-gui
-```
-
-**Docker の場合:**
-```bash
-docker run -p 8501:8501 -v $(pwd)/downloads:/app/downloads paper-fetch paper-fetch-gui
-```
-ブラウザで `http://localhost:8501` にアクセスしてください。
-
-### MCPサーバー
-
-LLMクライアント（Claude Desktop, VS Codeなど）でPaperFetchをMCPサーバーとして使用する場合。
-
-**コマンド:** `paper-fetch-mcp`
-
-#### Claude Desktop 設定例
-`claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "paper-fetch": {
-      "command": "paper-fetch-mcp",
-      "args": []
-    }
-  }
-}
-```
-※ `pipx` や `uv tool` でインストールしていれば、パスが通っているためフルパス指定は不要です。
-
-**利用可能なツール:**
-- `search_papers(source, query, limit, open_access_only)`: 論文を検索します。
-- `download_paper(url, title, authors, year, save_dir)`: 特定の論文をダウンロードします。
-
-## プロジェクト構成
-
-- `src/paper_fetch/cli.py`: CLIのエントリーポイント
-- `src/paper_fetch/server.py`: MCPサーバーのエントリーポイント
-- `src/paper_fetch/gui.py`: GUIのエントリーポイント
-- `src/paper_fetch/gui_items/`: GUIコンポーネント用モジュール
-- `src/paper_fetch/fetchers/`: 各データソース（Arxiv, IEEE, 3GPP）の取得ロジック
-- `src/paper_fetch/converter.py`: PDFからMarkdownへの変換ロジック
-- `downloads/`: ダウンロードされたPDFのデフォルト保存先
-
-## 安全な利用とレート制限について
-
-大量の論文を短時間にダウンロードすると、提供元（Arxiv, IEEE）からIPブロックなどの制限を受ける可能性があります。以下の点に注意してご利用ください。
-
-- **検索リミットの活用**: デフォルトでは検索結果は10件に制限されています。無制限（`0` または `all`）に設定する場合は十分ご注意ください。
-- **Hit Count機能**: CLIの対話モードでは、実際に検索・ダウンロードを行う前に「Check Hit Count」機能を使用して、対象件数を確認することをお勧めします。
-- **ダウンロード間隔**: ツール内部で以下の待機時間を設けています。
-    - **検索**: 3.0秒 + ランダム待機 (0.0〜2.0秒) = **約3.0〜5.0秒**
-    - **ダウンロード**: 20.0秒 + ランダム待機 (10.0〜40.0秒) = **約30.0〜60.0秒**
-    - GUIではリアルタイムの待機状況が表示されますが、大量のダウンロードには時間がかかることを予めご了承ください。
+詳細な仕様は [詳細機能解説](docs/features.md) をご覧ください。

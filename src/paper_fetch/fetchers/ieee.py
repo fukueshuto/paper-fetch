@@ -8,24 +8,36 @@ from .utils import generate_filename
 
 from ..converter import Converter
 
+
 class IeeeFetcher(BaseFetcher):
     def __init__(self):
         super().__init__(search_delay=3.0, download_delay=20.0)
         self.base_url = "https://ieeexplore.ieee.org"
         self.headers = {
-            'Host': 'ieeexplore.ieee.org',
-            'Content-Type': "application/json",
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://ieeexplore.ieee.org',
-            'Referer': 'https://ieeexplore.ieee.org/search/searchresult.jsp'
+            "Host": "ieeexplore.ieee.org",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://ieeexplore.ieee.org",
+            "Referer": "https://ieeexplore.ieee.org/search/searchresult.jsp",
         }
         self.converter = Converter()
 
-    def search(self, query: str, max_results: int = 10, open_access_only: bool = False, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+    def search(
+        self,
+        query: str,
+        max_results: int = 10,
+        open_access_only: bool = False,
+        sort_by: str = "relevance",
+        sort_order: str = "desc",
+        start_year: int = None,
+        end_year: int = None,
+    ) -> List[Paper]:
         self._wait_for_search()
         if max_results is None:
-            print("Warning: max_results is None. Recommend to set a safe upper bound for IEEE API.")
+            print(
+                "Warning: max_results is None. Recommend to set a safe upper bound for IEEE API."
+            )
         # Get session cookies first
         session = requests.Session()
         try:
@@ -37,7 +49,7 @@ class IeeeFetcher(BaseFetcher):
             "queryText": query,
             "returnFacets": ["ALL"],
             "returnType": "SEARCH",
-            "rowsPerPage": max_results
+            "rowsPerPage": max_results,
         }
 
         # Sorting
@@ -63,7 +75,7 @@ class IeeeFetcher(BaseFetcher):
                 f"{self.base_url}/rest/search",
                 headers=self.headers,
                 json=payload,
-                timeout=20
+                timeout=20,
             )
             response.raise_for_status()
             data = response.json()
@@ -72,35 +84,35 @@ class IeeeFetcher(BaseFetcher):
             return []
 
         results = []
-        if 'records' in data:
-            for item in data['records']:
+        if "records" in data:
+            for item in data["records"]:
                 try:
-                    title = item.get('articleTitle', '')
+                    title = item.get("articleTitle", "")
 
                     # Authors
                     authors = []
-                    if 'authors' in item:
-                        for auth in item['authors']:
-                            if 'preferredName' in auth:
-                                authors.append(auth['preferredName'])
-                            elif 'normalizedName' in auth:
-                                authors.append(auth['normalizedName'])
+                    if "authors" in item:
+                        for auth in item["authors"]:
+                            if "preferredName" in auth:
+                                authors.append(auth["preferredName"])
+                            elif "normalizedName" in auth:
+                                authors.append(auth["normalizedName"])
 
-                    abstract = item.get('abstract', '')
+                    abstract = item.get("abstract", "")
 
                     # URL & ID
-                    arnumber = item.get('articleNumber', '')
+                    arnumber = item.get("articleNumber", "")
                     url = f"{self.base_url}/document/{arnumber}/"
 
                     # PDF URL
                     # The API returns "pdfLink": "/stamp/stamp.jsp?tp=&arnumber=..."
-                    pdf_link = item.get('pdfLink', '')
+                    pdf_link = item.get("pdfLink", "")
                     pdf_url = ""
                     if pdf_link:
                         pdf_url = self.base_url + pdf_link
 
                     # Year
-                    year = item.get('publicationYear')
+                    year = item.get("publicationYear")
                     published_date = None
                     if year:
                         try:
@@ -110,16 +122,21 @@ class IeeeFetcher(BaseFetcher):
 
                     # Access Status
                     # accessType can be a string or a dict: {'type': 'locked', ...}
-                    access_type_val = item.get('accessType')
+                    access_type_val = item.get("accessType")
                     is_downloadable = False
 
                     if isinstance(access_type_val, dict):
                         # e.g. {'type': 'locked', ...} or {'type': 'open-access', ...}
-                        type_str = access_type_val.get('type', '').upper().replace('-', '_')
-                        if type_str in ['OPEN_ACCESS', 'EPHEMERA']:
+                        type_str = (
+                            access_type_val.get("type", "").upper().replace("-", "_")
+                        )
+                        if type_str in ["OPEN_ACCESS", "EPHEMERA"]:
                             is_downloadable = True
                     elif isinstance(access_type_val, str):
-                        if access_type_val.upper().replace('-', '_') in ['OPEN_ACCESS', 'EPHEMERA']:
+                        if access_type_val.upper().replace("-", "_") in [
+                            "OPEN_ACCESS",
+                            "EPHEMERA",
+                        ]:
                             is_downloadable = True
 
                     # If PDF link is available, consider it downloadable (e.g. via IP auth)
@@ -143,7 +160,7 @@ class IeeeFetcher(BaseFetcher):
                         url=url,
                         pdf_url=pdf_url,
                         published_date=published_date,
-                        is_downloadable=is_downloadable
+                        is_downloadable=is_downloadable,
                     )
                     results.append(paper)
                 except Exception as e:
@@ -152,7 +169,9 @@ class IeeeFetcher(BaseFetcher):
 
         return results
 
-    def get_total_results(self, query: str, start_year: int = None, end_year: int = None, **kwargs) -> int:
+    def get_total_results(
+        self, query: str, start_year: int = None, end_year: int = None, **kwargs
+    ) -> int:
         self._wait_for_search()
         session = requests.Session()
         try:
@@ -164,7 +183,7 @@ class IeeeFetcher(BaseFetcher):
             "queryText": query,
             "returnFacets": ["ALL"],
             "returnType": "SEARCH",
-            "rowsPerPage": 1
+            "rowsPerPage": 1,
         }
 
         if start_year or end_year:
@@ -180,34 +199,47 @@ class IeeeFetcher(BaseFetcher):
                 f"{self.base_url}/rest/search",
                 headers=self.headers,
                 json=payload,
-                timeout=20
+                timeout=20,
             )
             response.raise_for_status()
             data = response.json()
-            return data.get('totalRecords', 0)
+            return data.get("totalRecords", 0)
         except Exception as e:
             print(f"Error getting total results: {e}")
             return -1
 
-    def download_pdf(self, paper: Paper, save_dir: str, convert_to_md: bool = False) -> str:
+    def download_pdf(
+        self,
+        paper: Paper,
+        save_dir: str,
+        convert_to_md: bool = False,
+        method: str = "default",
+        **kwargs,
+    ) -> str:
         self._wait_for_download()
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        filename = generate_filename(paper.title, paper.authors, paper.published_date, source="ieee")
+        filename = generate_filename(
+            paper.title, paper.authors, paper.published_date, source="ieee"
+        )
         filepath = os.path.join(save_dir, filename)
 
         # Try direct download first using requests (faster)
         # Reference: https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=...
         try:
             if paper.id:
-                download_url = f"{self.base_url}/stampPDF/getPDF.jsp?tp=&arnumber={paper.id}"
-                response = requests.get(download_url, headers=self.headers, stream=True, timeout=30)
+                download_url = (
+                    f"{self.base_url}/stampPDF/getPDF.jsp?tp=&arnumber={paper.id}"
+                )
+                response = requests.get(
+                    download_url, headers=self.headers, stream=True, timeout=30
+                )
 
                 # Check if we got a PDF or an HTML page (login/error)
-                content_type = response.headers.get('Content-Type', '')
-                if 'application/pdf' in content_type:
-                    with open(filepath, 'wb') as f:
+                content_type = response.headers.get("Content-Type", "")
+                if "application/pdf" in content_type:
+                    with open(filepath, "wb") as f:
                         for chunk in response.iter_content(chunk_size=8192):
                             f.write(chunk)
 
@@ -216,7 +248,9 @@ class IeeeFetcher(BaseFetcher):
 
                     return filepath
                 else:
-                    raise Exception(f"Failed to download PDF. Content-Type: {content_type}")
+                    raise Exception(
+                        f"Failed to download PDF. Content-Type: {content_type}"
+                    )
             else:
                 raise Exception("Paper ID is missing")
         except Exception as e:

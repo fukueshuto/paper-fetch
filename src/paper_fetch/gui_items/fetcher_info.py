@@ -7,6 +7,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from paper_fetch.fetchers.arxiv import ArxivFetcher
 from paper_fetch.fetchers.ieee import IeeeFetcher
 from paper_fetch.fetchers.threegpp import ThreeGPPFetcher
+from paper_fetch.fetchers.uspto import UsptoFetcher
+
 
 def get_fetcher(source):
     if source == "arxiv":
@@ -15,7 +17,10 @@ def get_fetcher(source):
         return IeeeFetcher()
     elif source == "3gpp":
         return ThreeGPPFetcher()
+    elif source == "uspto":
+        return UsptoFetcher()
     return None
+
 
 def get_search_hint(current_source_for_hint):
     if current_source_for_hint == "arxiv":
@@ -36,4 +41,10 @@ def get_search_hint(current_source_for_hint):
         - **URL指定**: 会議ドキュメントや仕様書のディレクトリURLを入力してください。
         - 例1: `https://www.3gpp.org/ftp/tsg_ran/WG1_RL1/TSGR1_122b/Docs/`
         - 例2: `https://www.3gpp.org/ftp/Specs/latest/Rel-19/38_series/`
+        """
+    elif current_source_for_hint == "uspto":
+        return """
+        - **フレーズ検索**: 単語やフレーズ (Title/Abstract)
+        - **日付指定**: `Start Year` / `End Year` を併用
+        - **注意**: PatentsView APIを使用。Google Patents形式の検索語とは異なります。
         """

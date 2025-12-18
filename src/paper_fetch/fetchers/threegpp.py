@@ -12,9 +12,12 @@ from ..converter import Converter
 
 logger = logging.getLogger(__name__)
 
+
 class ThreeGPPFetcher(BaseFetcher):
     def __init__(self):
-        super().__init__(search_delay=1.0, download_delay=1.0) # 3GPP FTP might not need strict rate limiting, but good to have
+        super().__init__(
+            search_delay=1.0, download_delay=1.0
+        )  # 3GPP FTP might not need strict rate limiting, but good to have
         self.converter = Converter()
 
     def search(self, query: str, max_results: int = 10, **kwargs) -> List[Paper]:
@@ -61,10 +64,19 @@ class ThreeGPPFetcher(BaseFetcher):
         links = re.findall(r'href=["\']([^"\']+)["\']', html_content)
 
         # Filter links
-        valid_extensions = ('.zip', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.pdf')
+        valid_extensions = (
+            ".zip",
+            ".doc",
+            ".docx",
+            ".ppt",
+            ".pptx",
+            ".xls",
+            ".xlsx",
+            ".pdf",
+        )
 
         for link in links:
-            if link.lower().endswith(valid_extensions) and not link.startswith('?'):
+            if link.lower().endswith(valid_extensions) and not link.startswith("?"):
                 # Decode URL encoded characters (e.g. %20)
                 filename = unquote(link)
                 # Ensure filename is safe (basename only) to prevent directory traversal
@@ -78,12 +90,12 @@ class ThreeGPPFetcher(BaseFetcher):
                     source="3gpp",
                     id=filename,
                     title=filename,
-                    authors=["3GPP"], # Placeholder
+                    authors=["3GPP"],  # Placeholder
                     abstract="No abstract available.",
                     url=full_url,
-                    pdf_url=full_url, # It's the source file
+                    pdf_url=full_url,  # It's the source file
                     published_date=None,
-                    is_downloadable=True
+                    is_downloadable=True,
                 )
                 papers.append(paper)
 
@@ -101,16 +113,16 @@ class ThreeGPPFetcher(BaseFetcher):
         .../Rel-19/38_series/ -> Rel-19_38_series
         """
         # Remove trailing slash
-        url = url.rstrip('/')
-        parts = url.split('/')
+        url = url.rstrip("/")
+        parts = url.split("/")
 
         # Strategy 1: Meeting Docs (usually ends with Docs, parent is meeting name)
-        if parts[-1].lower() == 'docs':
+        if parts[-1].lower() == "docs":
             return parts[-2]
 
         # Strategy 2: Specs Series (usually ends with series number, parent is Release)
         # e.g. .../Rel-19/38_series
-        if 'series' in parts[-1].lower():
+        if "series" in parts[-1].lower():
             # Combine release and series
             return f"{parts[-2]}_{parts[-1]}"
 
@@ -128,7 +140,15 @@ class ThreeGPPFetcher(BaseFetcher):
         # Otherwise fallback to default sanitization
         return super().get_query_dirname(query)
 
-    def download_pdf(self, paper: Paper, save_dir: str, convert_to_md: bool = False, convert_to_pdf: bool = True) -> str:
+    def download_pdf(
+        self,
+        paper: Paper,
+        save_dir: str,
+        convert_to_md: bool = False,
+        convert_to_pdf: bool = True,
+        method: str = "default",
+        **kwargs,
+    ) -> str:
         """
         Download and process 3GPP document.
         save_dir: The base directory to save to (e.g. downloads/3gpp)
@@ -171,8 +191,10 @@ class ThreeGPPFetcher(BaseFetcher):
         if convert_to_md and not os.path.exists(md_dir):
             os.makedirs(md_dir)
 
-        filename = paper.id # This is the filename from search
-        local_path = os.path.join(target_base_dir, filename) # Temporary download location
+        filename = paper.id  # This is the filename from search
+        local_path = os.path.join(
+            target_base_dir, filename
+        )  # Temporary download location
 
         # Check if already processed (in archive or pdf)
         # But paper-fetch usually expects us to download if called.
@@ -182,7 +204,7 @@ class ThreeGPPFetcher(BaseFetcher):
             logger.info(f"Downloading {paper.url}...")
             response = requests.get(paper.url, stream=True, timeout=30)
             response.raise_for_status()
-            with open(local_path, 'wb') as f:
+            with open(local_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
         except Exception as e:
@@ -192,10 +214,11 @@ class ThreeGPPFetcher(BaseFetcher):
         final_pdf_path = ""
 
         # Process based on extension
-        if filename.lower().endswith('.zip'):
+        if filename.lower().endswith(".zip"):
             # Extract
             # We extract to a temp dir first to see what's inside
             import tempfile
+
             with tempfile.TemporaryDirectory() as temp_extract_dir:
                 success = self.converter.extract_zip(local_path, temp_extract_dir)
                 if success:
@@ -213,7 +236,14 @@ class ThreeGPPFetcher(BaseFetcher):
                             file_path = os.path.join(root, file)
                             ext = os.path.splitext(file)[1].lower()
 
-                            if ext in ['.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx']:
+                            if ext in [
+                                ".doc",
+                                ".docx",
+                                ".ppt",
+                                ".pptx",
+                                ".xls",
+                                ".xlsx",
+                            ]:
                                 found_office_file = True
                                 # Move to source dir
                                 # We might want to rename it to match zip name if needed,
@@ -222,18 +252,24 @@ class ThreeGPPFetcher(BaseFetcher):
 
                                 zip_basename = os.path.splitext(filename)[0]
                                 new_filename = f"{zip_basename}_{file}"
-                                dest_source_path = os.path.join(source_dir, new_filename)
+                                dest_source_path = os.path.join(
+                                    source_dir, new_filename
+                                )
                                 shutil.copy2(file_path, dest_source_path)
 
                                 # Convert to PDF
                                 if convert_to_pdf:
-                                    pdf_path = self.converter.convert_to_pdf(dest_source_path, pdf_dir)
+                                    pdf_path = self.converter.convert_to_pdf(
+                                        dest_source_path, pdf_dir
+                                    )
                                     if pdf_path:
                                         final_pdf_path = pdf_path
 
                                 # Convert to Markdown (Optional)
                                 if convert_to_md:
-                                    self.converter.convert_to_markdown(dest_source_path, md_dir)
+                                    self.converter.convert_to_markdown(
+                                        dest_source_path, md_dir
+                                    )
 
                     if not found_office_file:
                         logger.warning(f"No office files found in {filename}")
@@ -241,7 +277,9 @@ class ThreeGPPFetcher(BaseFetcher):
                         # If PDFs found, move them to pdf_dir
                         for root, _, files in os.walk(temp_extract_dir):
                             for file in files:
-                                if file.lower().endswith('.pdf') and not file.startswith("._"):
+                                if file.lower().endswith(
+                                    ".pdf"
+                                ) and not file.startswith("._"):
                                     # If it's a PDF, we treat it as source AND pdf?
                                     # Or just put in PDF dir?
                                     # If convert_to_pdf is False, maybe we still want it in source?
@@ -255,14 +293,20 @@ class ThreeGPPFetcher(BaseFetcher):
                                     # Let's put it in PDF dir.
                                     extracted_pdf_path = os.path.join(root, file)
                                     if convert_to_pdf:
-                                        if not os.path.exists(pdf_dir): os.makedirs(pdf_dir)
-                                        shutil.copy2(extracted_pdf_path, os.path.join(pdf_dir, file))
+                                        if not os.path.exists(pdf_dir):
+                                            os.makedirs(pdf_dir)
+                                        shutil.copy2(
+                                            extracted_pdf_path,
+                                            os.path.join(pdf_dir, file),
+                                        )
                                         if not final_pdf_path:
                                             final_pdf_path = os.path.join(pdf_dir, file)
 
                                     # Also convert to MD if requested
                                     if convert_to_md:
-                                        self.converter.convert_to_markdown(extracted_pdf_path, md_dir)
+                                        self.converter.convert_to_markdown(
+                                            extracted_pdf_path, md_dir
+                                        )
 
                 else:
                     logger.error(f"Failed to extract {filename}")
@@ -270,7 +314,9 @@ class ThreeGPPFetcher(BaseFetcher):
                     # Leave it for retry or manual inspection
                     pass
 
-        elif filename.lower().endswith(('.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx')):
+        elif filename.lower().endswith(
+            (".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx")
+        ):
             # Direct office file
             # Move to source
             dest_source_path = os.path.join(source_dir, filename)
@@ -285,7 +331,7 @@ class ThreeGPPFetcher(BaseFetcher):
             if convert_to_md:
                 self.converter.convert_to_markdown(dest_source_path, md_dir)
 
-        elif filename.lower().endswith('.pdf'):
+        elif filename.lower().endswith(".pdf"):
             # Direct PDF
             # If convert_to_pdf is False, do we still save it?
             # Yes, it's the file we downloaded.
@@ -296,7 +342,8 @@ class ThreeGPPFetcher(BaseFetcher):
             # So we save it to pdf dir (or source dir?).
             # Let's save to PDF dir as it is a PDF.
             if convert_to_pdf:
-                if not os.path.exists(pdf_dir): os.makedirs(pdf_dir)
+                if not os.path.exists(pdf_dir):
+                    os.makedirs(pdf_dir)
                 dest_pdf_path = os.path.join(pdf_dir, filename)
                 shutil.move(local_path, dest_pdf_path)
                 final_pdf_path = dest_pdf_path
@@ -304,7 +351,7 @@ class ThreeGPPFetcher(BaseFetcher):
                 # If no PDF conversion wanted, but file IS PDF, maybe put in source?
                 dest_source_path = os.path.join(source_dir, filename)
                 shutil.move(local_path, dest_source_path)
-                final_pdf_path = dest_source_path # Return this as the result
+                final_pdf_path = dest_source_path  # Return this as the result
 
             if convert_to_md:
                 # We need the path to the file.
@@ -318,7 +365,11 @@ class ThreeGPPFetcher(BaseFetcher):
             shutil.move(local_path, os.path.join(source_dir, filename))
 
         # Return the path to the PDF if generated, else the source file
-        return final_pdf_path if final_pdf_path else os.path.join(target_base_dir, filename)
+        return (
+            final_pdf_path
+            if final_pdf_path
+            else os.path.join(target_base_dir, filename)
+        )
 
     def get_total_results(self, query: str, **kwargs) -> int:
         # For 3GPP, we can just fetch and count

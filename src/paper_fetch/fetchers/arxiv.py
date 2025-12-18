@@ -8,17 +8,26 @@ from .utils import generate_filename
 
 from ..converter import Converter
 
+
 class ArxivFetcher(BaseFetcher):
     def __init__(self):
         super().__init__(search_delay=3.0, download_delay=20.0)
         self.client = arxiv.Client(
             page_size=10,
-            delay_seconds=3.0, # arxiv library also has its own delay, but we enforce ours globally
-            num_retries=3
+            delay_seconds=3.0,  # arxiv library also has its own delay, but we enforce ours globally
+            num_retries=3,
         )
         self.converter = Converter()
 
-    def search(self, query: str, max_results: int = 10, sort_by: str = "relevance", sort_order: str = "desc", start_year: int = None, end_year: int = None) -> List[Paper]:
+    def search(
+        self,
+        query: str,
+        max_results: int = 10,
+        sort_by: str = "relevance",
+        sort_order: str = "desc",
+        start_year: int = None,
+        end_year: int = None,
+    ) -> List[Paper]:
         self._wait_for_search()
         # Map sort_by
         criterion = arxiv.SortCriterion.Relevance
@@ -42,7 +51,7 @@ class ArxivFetcher(BaseFetcher):
             query=final_query,
             max_results=max_results,
             sort_by=criterion,
-            sort_order=order
+            sort_order=order,
         )
 
         results = []
@@ -52,19 +61,21 @@ class ArxivFetcher(BaseFetcher):
 
             paper = Paper(
                 source="arxiv",
-                id=result.entry_id.split('/')[-1], # Extract ID from URL
+                id=result.entry_id.split("/")[-1],  # Extract ID from URL
                 title=result.title,
                 authors=[a.name for a in result.authors],
                 abstract=result.summary,
                 url=result.entry_id,
                 pdf_url=result.pdf_url,
-                published_date=published_date
+                published_date=published_date,
             )
             results.append(paper)
 
         return results
 
-    def get_total_results(self, query: str, start_year: int = None, end_year: int = None, **kwargs) -> int:
+    def get_total_results(
+        self, query: str, start_year: int = None, end_year: int = None, **kwargs
+    ) -> int:
         self._wait_for_search()
         import xml.etree.ElementTree as ET
 
@@ -75,19 +86,15 @@ class ArxivFetcher(BaseFetcher):
             end_str = f"{end_year}12312359" if end_year else "209912312359"
             final_query = f"{query} AND submittedDate:[{start_str} TO {end_str}]"
 
-        url = 'http://export.arxiv.org/api/query'
-        params = {
-            'search_query': final_query,
-            'start': 0,
-            'max_results': 1
-        }
+        url = "http://export.arxiv.org/api/query"
+        params = {"search_query": final_query, "start": 0, "max_results": 1}
 
         try:
             response = requests.get(url, params=params, timeout=20)
             response.raise_for_status()
             root = ET.fromstring(response.content)
-            ns = {'opensearch': 'http://a9.com/-/spec/opensearch/1.1/'}
-            total_results = root.find('opensearch:totalResults', ns)
+            ns = {"opensearch": "http://a9.com/-/spec/opensearch/1.1/"}
+            total_results = root.find("opensearch:totalResults", ns)
             if total_results is not None:
                 return int(total_results.text)
         except Exception as e:
@@ -95,12 +102,21 @@ class ArxivFetcher(BaseFetcher):
 
         return -1
 
-    def download_pdf(self, paper: Paper, save_dir: str, convert_to_md: bool = False) -> str:
+    def download_pdf(
+        self,
+        paper: Paper,
+        save_dir: str,
+        convert_to_md: bool = False,
+        method: str = "default",
+        **kwargs,
+    ) -> str:
         self._wait_for_download()
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        filename = generate_filename(paper.title, paper.authors, paper.published_date, source="arxiv")
+        filename = generate_filename(
+            paper.title, paper.authors, paper.published_date, source="arxiv"
+        )
         filepath = os.path.join(save_dir, filename)
 
         # Use requests to download to have full control over the file creation
@@ -108,7 +124,7 @@ class ArxivFetcher(BaseFetcher):
         response = requests.get(paper.pdf_url, stream=True)
         response.raise_for_status()
 
-        with open(filepath, 'wb') as f:
+        with open(filepath, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
