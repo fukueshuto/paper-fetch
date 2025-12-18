@@ -1,88 +1,68 @@
 # PaperFetch
 
-[English](README_EN.md) | [詳細機能解説](docs/features.md) | [開発者・設計ガイド](docs/design.md) | [トラブルシューティング](docs/troubleshooting.md)
+[English](README_EN.md) | [**使い方ガイド**](docs/usage.md) | [インストール](docs/installation.md) | [開発者ガイド](docs/design.md)
 
-PaperFetchは、Arxiv、IEEE Xplore、3GPPから学術論文や技術仕様書を効率的に検索・ダウンロードするためのツールです。
-コマンドラインインターフェース（CLI）、Web GUI、およびModel Context Protocol（MCP）サーバーを提供し、研究者やエンジニアのワークフローを加速します。
+**PaperFetch** は、研究者やエンジニアのための、**論文・技術文書の収集と管理を自動化する"Universal Fetcher"** です。
 
-## 主な機能
+Arxiv、IEEE、3GPPなど、分散している情報源から必要なドキュメントを効率的に検索・ダウンロードし、AI時代に即した形式（Markdown等）へ変換、さらには NotebookLM などのRAGツールへ直接橋渡しをします。
 
-- **マルチソース検索**:
-  - **Arxiv**: 公式APIを使用した検索。
-  - **IEEE Xplore**: Open Access論文のフィルタリング対応。
-  - **3GPP**: 仕様書や寄書の検索、URL指定によるフォルダ一括ダウンロード。
-- **特許検索 (USPTO)**:
-  - **Status**: ⚠️ **Experimental / Unverified**
-  - 現在実装中ですが、APIキー取得待ちのため十分なデバッグが行われていません。動作保証外となります。
-- **NotebookLM 連携 (Enhanced)**:
-  - ダウンロードした論文PDFをGoogle NotebookLMへ自動アップロード。
-  - **Direct Open**: ノートブックIDを指定して既存のノートブックへ直接追加可能。
-  - **Session Resume**: 前回作業したノートブック情報を保持し、継続的な追加が可能。
-- **高度な設定管理**:
-  - `config.toml` によるデフォルト設定の管理。
-- **ドキュメント変換**:
-  - PDFからMarkdownへのテキスト変換。
-  - 3GPPドキュメントのPDF変換オプション。
+---
 
-## 前提条件
+## 🚀 なぜ PaperFetch なのか？
 
-- Python 3.12以上
-- [uv](https://github.com/astral-sh/uv) （推奨）
-- **NotebookLM連携**:
-    - `patchright` (自動化用ブラウザ)
-    - ※ 初回実行時に自動または手動でブラウザバイナリのインストールが必要です。
+- **All-in-One 収集**: 論文(Arxiv/IEEE)も仕様書(3GPP)も、一つのツールで統一的に扱えます。
+- **AI Ready**: ダウンロードするだけでなく、PDFを解析しやすいMarkdownに変換したり、NotebookLMへ自動アップロードしてすぐにチャットを開始できる状態にします。
+- **Safe & Robust**: サイトごとのレート制限やダウンロード待機時間を適切に管理し、IPブロックのリスクを低減しながら大量の文献を収集できます。
+- **Flexible Interfaces**:
+    - **Web GUI**: 検索結果を見ながらポチポチ選びたい時に。
+    - **CLI**: スクリプトに組み込んで定期実行したい時に。
+    - **MCP Server**: Claude などのAIエージェントに調べ物を依頼したい時に。
 
-## インストール
+## 📚 ドキュメント
 
-### 推奨: uv tool
+機能や使い方の詳細は、以下のドキュメントに分割して管理しています。
+
+- **[インストール](docs/installation.md)**: セットアップ手順と前提条件（Python, uv, patchright）。
+- **[基本的な使い方](docs/usage.md)**: GUIとCLIの操作方法、検索からダウンロードまでのフロー。
+- **[対応データソース](docs/sources.md)**: Arxiv, IEEE, 3GPP, Patentsの詳細仕様。
+- **[NotebookLM 連携](docs/notebooklm.md)**: AIノートブックへの自動アップロード機能について。
+- **[設定ガイド](docs/configuration.md)**: `config.toml` によるデフォルト設定のカスタマイズ。
+- **[トラブルシューティング](docs/troubleshooting.md)**: よくあるエラーと対処法。
+- **[アーキテクチャ・開発](docs/design.md)**: 内部構造とコントリビュートのガイド。
+
+## ⚡️ Quick Start
+
+`uv` (Python package manager) を使用するのが最も簡単です。
+
+### 1. インストール
 
 ```bash
 uv tool install .
-# または
-uv tool install git+https://github.com/fukueshuto/paper-fetch.git
-```
-
-### NotebookLM機能の準備 (Patchright)
-
-NotebookLM連携機能を使用する場合、より検出されにくいブラウザ自動化ツールである `patchright` を使用します。
-
-```bash
-# 必要なブラウザバイナリのインストール
+# NotebookLM連携用ブラウザの準備
 uv run patchright install chromium
 ```
 
-## 使い方
-
-### 1. Web GUIでの使用 (NotebookLM連携)
+### 2. GUIを起動
 
 ```bash
 uv run paper-fetch-gui
 ```
 
-GUIの "Export Actions" タブから "NotebookLM" を選択します。
-- **Create New Notebook**: 新しいノートブックを作成してアップロード。
-- **Add to Existing Notebook**: 既存のノートブックに追加。IDを指定するか、ブラウザ上で手動選択が可能です。
+ブラウザが立ち上がり、すぐに論文検索を始められます。
 
-### 2. CLIでの使用
+---
 
-```bash
-# 対話モード
-paper-fetch
+## 🛠 ディレクトリ構成 (出力例)
 
-# ワンライナー
-paper-fetch --source arxiv --query "generative ai"
-```
-
-## ディレクトリ構成
-
-ダウンロードフォルダには、NotebookLMのセッション情報 (`notebooklm_session.json`) も保存され、後から同じノートブックを再利用するのに役立ちます。
+論文はプロジェクトルート（または設定したパス）の `downloads/` に、検索クエリと日付ごとに整理されて保存されます。
 
 ```text
 downloads/
-  └── {YYYYMMDD}_{Query}/
-      ├── arxiv/
-      ├── notebooklm_session.json  # 自動生成されるセッション情報
-      └── ...
+└── 20240101_generative_ai/        # {日付}_{クエリ}
+    ├── arxiv/
+    │   ├── 2312.12345.pdf         # 原本PDF
+    │   ├── 2312.12345.md          # 変換されたMarkdownテキスト
+    │   └── ...
+    ├── notebooklm_session.json    # NotebookLM連携用のセッション情報
+    └── ...
 ```
-
-詳細な仕様は [詳細機能解説](docs/features.md) をご覧ください。
