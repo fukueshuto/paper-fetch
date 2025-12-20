@@ -24,9 +24,16 @@ def results_panel():
 
 
 def export_view(go_back_callback):
-    st.markdown(
-        '<h1 class="main-header">📤 Export Actions</h1>', unsafe_allow_html=True
+    icon_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png"
     )
+    col1, col2 = st.columns([1, 8], vertical_alignment="center")
+    with col1:
+        st.image(icon_path, width=80)
+    with col2:
+        st.markdown(
+            '<h1 class="main-header">Export Actions</h1>', unsafe_allow_html=True
+        )
 
     if st.button("⬅️ Back to Results"):
         go_back_callback()
@@ -201,9 +208,16 @@ def export_view(go_back_callback):
 
 
 def results_list_view(go_to_export_callback):
-    st.markdown(
-        '<h1 class="main-header">📚 Search Results</h1>', unsafe_allow_html=True
+    icon_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png"
     )
+    col1, col2 = st.columns([1, 8], vertical_alignment="center")
+    with col1:
+        st.image(icon_path, width=80)
+    with col2:
+        st.markdown(
+            '<h1 class="main-header">Search Results</h1>', unsafe_allow_html=True
+        )
     with st.container():
         # 2. Settings Area (Outside Form)
         # Download Settings

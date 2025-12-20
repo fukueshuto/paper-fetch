@@ -92,7 +92,17 @@ def perform_search():
 
 
 def search_panel():
-    st.markdown('<h1 class="main-header">📚 Paper Fetch</h1>', unsafe_allow_html=True)
+    icon_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png"
+    )
+    col1, col2 = st.columns([1, 8], vertical_alignment="center")
+    with col1:
+        st.image(icon_path, width=80)
+    with col2:
+        st.markdown(
+            '<h1 class="main-header" style="margin-top: 10px;">Paper Fetch</h1>',
+            unsafe_allow_html=True,
+        )
 
     # 1. Search Form (Query & Search Button only)
     # with st.form("search_form"):
