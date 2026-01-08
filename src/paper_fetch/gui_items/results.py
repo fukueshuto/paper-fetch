@@ -225,8 +225,15 @@ def results_list_view(go_to_export_callback):
             3, vertical_alignment="bottom"
         )
         with col_save_dir:
+
+            def update_output_dir():
+                st.session_state.output_dir = st.session_state.output_dir_widget
+
             st.text_input(
-                "Save Dir", value=st.session_state.executed_save_dir, key="output_dir"
+                "Save Dir",
+                value=st.session_state.output_dir,
+                key="output_dir_widget",
+                on_change=update_output_dir,
             )
         with col_dl_limit:
             if st.session_state.unlimited_download:
