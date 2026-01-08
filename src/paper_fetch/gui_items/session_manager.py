@@ -7,9 +7,16 @@ from paper_fetch.gui_items.state import save_state
 
 
 def session_manager_panel():
-    st.markdown(
-        '<h1 class="main-header">📂 Session Manager</h1>', unsafe_allow_html=True
+    icon_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "assets", "icon.png"
     )
+    col1, col2 = st.columns([1, 8], vertical_alignment="center")
+    with col1:
+        st.image(icon_path, width=80)
+    with col2:
+        st.markdown(
+            '<h1 class="main-header">Session Manager</h1>', unsafe_allow_html=True
+        )
 
     if st.button("⬅️ Back to Search"):
         st.session_state.in_session_manager_mode = False

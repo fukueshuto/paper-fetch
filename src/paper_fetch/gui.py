@@ -21,9 +21,10 @@ def main():
 
 
 if __name__ == "__main__":
+    icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.png")
     st.set_page_config(
         page_title="PaperFetch GUI",
-        page_icon="📚",
+        page_icon=icon_path,
         layout="wide",
         initial_sidebar_state="expanded",
     )
